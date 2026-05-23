@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { usePrivy, useWallets } from '@privy-io/react-auth';
-import { Copy, RefreshCcw, Wallet } from 'lucide-react';
+import { Copy, RefreshCcw } from 'lucide-react';
 
 const API_URL =
   import.meta.env.VITE_API_URL ||
@@ -90,7 +90,7 @@ function Landing({ onEnter }) {
               className="btn"
               onClick={onEnter}
             >
-              Entrar com Nexa
+              Entrar
             </button>
 
             <button
@@ -116,25 +116,16 @@ function Landing({ onEnter }) {
           <p className="subtitle">
             Guarde em dólar digital,
             use no Pix e acesse cripto
-            sem precisar entender
-            pontes, redes, gas fee,
-            seed phrase ou análise
-            técnica.
+            sem seed phrase, bridge,
+            rede ou burocracia.
           </p>
 
           <div className="actions">
             <button
               className="btn btn-primary"
-              onClick={login}
-            >
-              Criar wallet com Privy
-            </button>
-
-            <button
-              className="btn"
               onClick={onEnter}
             >
-              Usar login Nexa
+              Começar em 30s
             </button>
           </div>
 
@@ -160,34 +151,9 @@ function Landing({ onEnter }) {
           </div>
 
           <p className="muted">
-            Pix ⇄ USDC em uma
-            experiência simples.
+            Pix ⇄ USDC em experiência
+            simples.
           </p>
-
-          <div
-            className="grid grid-2"
-            style={{ marginTop: 24 }}
-          >
-            <div className="card">
-              <strong>
-                ⚡ Depositar Pix
-              </strong>
-
-              <p className="muted small">
-                Pix para USDC
-              </p>
-            </div>
-
-            <div className="card">
-              <strong>
-                📲 Pagar Pix
-              </strong>
-
-              <p className="muted small">
-                USDC para Pix
-              </p>
-            </div>
-          </div>
         </div>
       </section>
     </div>
@@ -308,12 +274,6 @@ function NexaLogin({ onLogged }) {
               : 'Começar em 30s'}
           </h2>
 
-          <p className="muted">
-            {mode === 'login'
-              ? 'Acesse sua conta Nexa.'
-              : 'Crie sua conta para testar o dólar digital.'}
-          </p>
-
           {mode === 'register' && (
             <>
               <input
@@ -413,12 +373,8 @@ function NexaLogin({ onLogged }) {
 }
 
 function Dashboard({ onLogout }) {
-  const {
-    login,
-    logout: privyLogout,
-    authenticated,
-    user: privyUser,
-  } = usePrivy();
+  const { logout: privyLogout } =
+    usePrivy();
 
   const { wallets } = useWallets();
 
@@ -438,14 +394,6 @@ function Dashboard({ onLogout }) {
     setDepositAmount,
   ] = useState('');
 
-  const [
-    paymentAmount,
-    setPaymentAmount,
-  ] = useState('');
-
-  const [pixKey, setPixKey] =
-    useState('');
-
   const [message, setMessage] =
     useState('');
 
@@ -453,8 +401,6 @@ function Dashboard({ onLogout }) {
     getStoredUser,
     [],
   );
-
-  const privyWallet = wallets?.[0];
 
   async function refresh() {
     const [
@@ -474,27 +420,6 @@ function Dashboard({ onLogout }) {
       'fulfilled'
     ) {
       setProfile(profileResult.value);
-    } else {
-      const storedUser =
-        getStoredUser();
-
-      setProfile({
-        fullName:
-          storedUser?.fullName,
-
-        email: storedUser?.email,
-
-        kycStatus: 'pending',
-
-        wallet: {
-          address:
-            'Wallet ainda não vinculada',
-
-          provider: 'sandbox',
-
-          network: 'polygon',
-        },
-      });
     }
 
     if (
@@ -527,8 +452,18 @@ function Dashboard({ onLogout }) {
       .map((r) => r.reason?.message)
       .filter(Boolean);
 
-    if (errors.length) {
-      setMessage(errors.join(' | '));
+    const visibleErrors =
+      errors.filter(
+        (error) =>
+          !String(error)
+            .toLowerCase()
+            .includes('forbidden'),
+      );
+
+    if (visibleErrors.length) {
+      setMessage(
+        visibleErrors.join(' | '),
+      );
     } else {
       setMessage('');
     }
@@ -546,7 +481,7 @@ function Dashboard({ onLogout }) {
 
       if (!amount || amount < 10) {
         setMessage(
-          'Depósito mínimo: R$ 10,00',
+          'Depósito mínimo: R$ 10',
         );
 
         return;
@@ -567,7 +502,7 @@ function Dashboard({ onLogout }) {
       setMessage(
         `Depósito criado: ${Number(
           result.amountUsdc || 0,
-        ).toFixed(4)} USDC`,
+        ).toFixed(2)} USDC`,
       );
 
       setDepositAmount('');
@@ -667,24 +602,24 @@ function Dashboard({ onLogout }) {
 
           <div className="card">
             <div className="metric-label">
+              Wallet
+            </div>
+
+            <div className="metric-value">
+              {wallets?.[0]?.address
+                ? 'Conectada'
+                : 'Sandbox'}
+            </div>
+          </div>
+
+          <div className="card">
+            <div className="metric-label">
               KYC
             </div>
 
             <div className="metric-value">
               {profile?.kycStatus ||
                 'pending'}
-            </div>
-          </div>
-
-          <div className="card">
-            <div className="metric-label">
-              Provider
-            </div>
-
-            <div className="metric-value">
-              {profile?.wallet
-                ?.provider ||
-                'sandbox'}
             </div>
           </div>
         </div>
@@ -695,16 +630,24 @@ function Dashboard({ onLogout }) {
         >
           <h2>Sua carteira Nexa</h2>
 
-          <p className="muted">
-            Wallet automática e
-            invisível para o usuário.
-          </p>
-
           <div className="wallet-box">
-            {profile?.wallet
-              ?.address ||
-              'Wallet ainda não vinculada'}
+            {wallets?.[0]?.address ||
+              'Wallet automática invisível para o usuário'}
           </div>
+
+          <button
+            className="btn"
+            style={{ marginTop: 12 }}
+            onClick={() =>
+              navigator.clipboard.writeText(
+                wallets?.[0]?.address ||
+                  '',
+              )
+            }
+          >
+            <Copy size={16} />
+            Copiar endereço
+          </button>
         </section>
 
         <div
