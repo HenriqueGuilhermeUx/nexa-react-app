@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { usePrivy, useWallets } from '@privy-io/react-auth';
-import { Copy, RefreshCcw } from 'lucide-react';
+import {
+  Copy,
+  RefreshCcw,
+} from 'lucide-react';
 
 const API_URL =
   import.meta.env.VITE_API_URL ||
@@ -67,12 +70,6 @@ function moneyBRL(value) {
 }
 
 function Landing({ onEnter }) {
-  const {
-    login,
-    authenticated,
-    user,
-  } = usePrivy();
-
   return (
     <div className="page">
       <nav className="nav">
@@ -87,19 +84,10 @@ function Landing({ onEnter }) {
             style={{ marginTop: 0 }}
           >
             <button
-              className="btn"
+              className="btn btn-primary"
               onClick={onEnter}
             >
               Entrar
-            </button>
-
-            <button
-              className="btn btn-primary"
-              onClick={login}
-            >
-              {authenticated
-                ? 'Privy conectado'
-                : 'Entrar com Privy'}
             </button>
           </div>
         </div>
@@ -108,16 +96,17 @@ function Landing({ onEnter }) {
       <section className="container hero">
         <div>
           <div className="badge">
-            Pix + USDC + Privy
+            Pix + Dólar Digital
           </div>
 
           <h1>Cripto sem complicação.</h1>
 
           <p className="subtitle">
-            Guarde em dólar digital,
-            use no Pix e acesse cripto
+            Deposite Pix em reais e
+            tenha saldo em dólar digital
             sem seed phrase, bridge,
-            rede ou burocracia.
+            rede, carteira externa ou
+            burocracia.
           </p>
 
           <div className="actions">
@@ -128,31 +117,19 @@ function Landing({ onEnter }) {
               Começar em 30s
             </button>
           </div>
-
-          {authenticated && (
-            <p
-              className="muted small"
-              style={{ marginTop: 20 }}
-            >
-              Privy autenticado:{' '}
-              {user?.email?.address ||
-                user?.id}
-            </p>
-          )}
         </div>
 
         <div className="card">
           <div className="metric-label">
-            Conta em dólar digital
+            Conta digital global
           </div>
 
           <div className="metric-value">
-            $ 238.12
+            USDC + Pix
           </div>
 
           <p className="muted">
-            Pix ⇄ USDC em experiência
-            simples.
+            Simples como um banco digital.
           </p>
         </div>
       </section>
@@ -274,6 +251,11 @@ function NexaLogin({ onLogged }) {
               : 'Começar em 30s'}
           </h2>
 
+          <p className="muted">
+            Conta digital em dólar com
+            Pix integrado.
+          </p>
+
           {mode === 'register' && (
             <>
               <input
@@ -373,8 +355,7 @@ function NexaLogin({ onLogged }) {
 }
 
 function Dashboard({ onLogout }) {
-  const { logout: privyLogout } =
-    usePrivy();
+  const { logout } = usePrivy();
 
   const { wallets } = useWallets();
 
@@ -516,7 +497,7 @@ function Dashboard({ onLogout }) {
   function logoutAll() {
     localStorage.clear();
 
-    privyLogout();
+    logout();
 
     onLogout();
   }
@@ -602,13 +583,11 @@ function Dashboard({ onLogout }) {
 
           <div className="card">
             <div className="metric-label">
-              Wallet
+              Conta digital
             </div>
 
             <div className="metric-value">
-              {wallets?.[0]?.address
-                ? 'Conectada'
-                : 'Sandbox'}
+              Ativa
             </div>
           </div>
 
@@ -628,26 +607,74 @@ function Dashboard({ onLogout }) {
           className="card"
           style={{ marginTop: 24 }}
         >
-          <h2>Sua carteira Nexa</h2>
+          <h2>
+            Sua conta digital Nexa
+          </h2>
 
-          <div className="wallet-box">
-            {wallets?.[0]?.address ||
-              'Wallet automática invisível para o usuário'}
+          <p className="muted">
+            Sua conta está preparada
+            para guardar dólar digital
+            e usar Pix sem precisar
+            lidar com rede, seed
+            phrase, bridge ou carteira
+            externa.
+          </p>
+
+          <div
+            className="grid grid-2"
+            style={{ marginTop: 20 }}
+          >
+            <div className="card">
+              <div className="metric-label">
+                Status da conta
+              </div>
+
+              <div className="metric-value">
+                Ativa
+              </div>
+            </div>
+
+            <div className="card">
+              <div className="metric-label">
+                Tipo de saldo
+              </div>
+
+              <div className="metric-value">
+                USDC
+              </div>
+            </div>
           </div>
 
-          <button
-            className="btn"
-            style={{ marginTop: 12 }}
-            onClick={() =>
-              navigator.clipboard.writeText(
-                wallets?.[0]?.address ||
-                  '',
-              )
-            }
+          <details
+            style={{ marginTop: 20 }}
           >
-            <Copy size={16} />
-            Copiar endereço
-          </button>
+            <summary className="muted">
+              Ver endereço técnico da
+              carteira
+            </summary>
+
+            <div
+              className="wallet-box"
+              style={{ marginTop: 12 }}
+            >
+              {wallets?.[0]?.address ||
+                'Endereço técnico ainda não criado'}
+            </div>
+
+            <button
+              className="btn"
+              style={{ marginTop: 12 }}
+              onClick={() =>
+                navigator.clipboard.writeText(
+                  wallets?.[0]?.address ||
+                    '',
+                )
+              }
+            >
+              <Copy size={16} />
+              Copiar endereço técnico
+            </button>
+          </details>
         </section>
 
         <div
