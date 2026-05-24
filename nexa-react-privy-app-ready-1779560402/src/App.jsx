@@ -107,7 +107,6 @@ function NexaLogin({ onLogged }) {
 
   async function submit(event) {
     event.preventDefault();
-
     setMessage(mode === 'login' ? 'Entrando...' : 'Criando conta...');
 
     try {
@@ -239,11 +238,25 @@ function Dashboard({ onLogout }) {
   const [depositAmount, setDepositAmount] = useState('');
   const [message, setMessage] = useState('');
   const [linking, setLinking] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const storedUser = useMemo(getStoredUser, []);
   const privyWallet = wallets?.[0];
 
+  const walletSavedInBackend =
+    profile?.wallet?.provider === 'privy' &&
+    !!profile?.wallet?.address;
+
+  const technicalAddress =
+    profile?.wallet?.address ||
+    privyWallet?.address ||
+    '';
+
+  const digitalAccountActive = walletSavedInBackend;
+
   async function refresh() {
+    setRefreshing(true);
+
     const [profileResult, balanceResult, txResult] =
       await Promise.allSettled([
         api('/user/me'),
@@ -273,39 +286,48 @@ function Dashboard({ onLogout }) {
     );
 
     setMessage(visibleErrors.length ? visibleErrors.join(' | ') : '');
+    setRefreshing(false);
   }
 
   async function linkPrivyWalletIfPossible() {
-    if (!authenticated || !privyWallet?.address || linking) return;
+    if (linking) return;
 
-    const currentAddress = profile?.wallet?.address;
+    if (!authenticated) {
+      setMessage('Faça login da conta digital para ativar.');
+      return;
+    }
 
-    if (
-      currentAddress &&
-      currentAddress !== 'Wallet ainda não vinculada' &&
-      currentAddress === privyWallet.address
-    ) {
+    if (!privyWallet?.address) {
+      setMessage(
+        'Login feito. Aguardando criação da carteira digital. Clique em Atualizar em alguns segundos.',
+      );
+      return;
+    }
+
+    if (walletSavedInBackend && profile?.wallet?.address === privyWallet.address) {
+      setMessage('Conta digital já está ativa.');
       return;
     }
 
     try {
       setLinking(true);
+      setMessage('Ativando conta digital...');
 
-      await api('/user/link-privy-wallet', {
+      const result = await api('/user/link-privy-wallet', {
         method: 'POST',
         body: JSON.stringify({
-          privyUserId: privyUser?.id,
+          privyUserId: privyUser?.id || 'privy-user',
           walletAddress: privyWallet.address,
-          privyWalletId: privyWallet.id,
+          privyWalletId: privyWallet.id || privyWallet.address,
           walletProvider: 'privy',
           walletNetwork: 'polygon',
         }),
       });
 
-      setMessage('Conta digital ativada com sucesso.');
+      setMessage(result?.message || 'Conta digital ativada com sucesso.');
       await refresh();
     } catch (error) {
-      setMessage(error.message);
+      setMessage(`Erro ao salvar carteira: ${error.message}`);
     } finally {
       setLinking(false);
     }
@@ -319,6 +341,7 @@ function Dashboard({ onLogout }) {
       }
 
       if (!authenticated) {
+        setMessage('Abrindo login da conta digital...');
         await login();
         return;
       }
@@ -334,10 +357,10 @@ function Dashboard({ onLogout }) {
   }, []);
 
   useEffect(() => {
-    if (authenticated && privyWallet?.address) {
+    if (authenticated && privyWallet?.address && !walletSavedInBackend) {
       linkPrivyWalletIfPossible();
     }
-  }, [authenticated, privyWallet?.address]);
+  }, [authenticated, privyWallet?.address, walletSavedInBackend]);
 
   async function createDeposit() {
     try {
@@ -361,7 +384,6 @@ function Dashboard({ onLogout }) {
       );
 
       setDepositAmount('');
-
       await refresh();
     } catch (error) {
       setMessage(error.message);
@@ -374,12 +396,6 @@ function Dashboard({ onLogout }) {
     onLogout();
   }
 
-  const technicalAddress =
-    profile?.wallet?.address || privyWallet?.address || '';
-
-  const digitalAccountActive =
-    authenticated || profile?.wallet?.provider === 'privy';
-
   return (
     <div className="page">
       <nav className="nav">
@@ -390,9 +406,9 @@ function Dashboard({ onLogout }) {
           </div>
 
           <div className="actions" style={{ marginTop: 0 }}>
-            <button className="btn" onClick={refresh}>
+            <button className="btn" onClick={refresh} disabled={refreshing}>
               <RefreshCcw size={16} />
-              Atualizar
+              {refreshing ? 'Atualizando...' : 'Atualizar'}
             </button>
 
             <button className="btn" onClick={logoutAll}>
@@ -471,6 +487,17 @@ function Dashboard({ onLogout }) {
             >
               <ShieldCheck size={16} />
               {linking ? 'Ativando...' : 'Ativar conta digital'}
+            </button>
+          )}
+
+          {authenticated && privyWallet?.address && !walletSavedInBackend && (
+            <button
+              className="btn"
+              style={{ marginTop: 12, marginLeft: 12 }}
+              onClick={linkPrivyWalletIfPossible}
+              disabled={linking}
+            >
+              Salvar conta digital
             </button>
           )}
 
