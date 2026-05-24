@@ -316,6 +316,8 @@ function Dashboard({ onLogout }) {
       const result = await api('/user/link-privy-wallet', {
         method: 'POST',
         body: JSON.stringify({
+          userId: storedUser?.id,
+          email: storedUser?.email,
           privyUserId: privyUser?.id || 'privy-user',
           walletAddress: privyWallet.address,
           privyWalletId: privyWallet.id || privyWallet.address,
