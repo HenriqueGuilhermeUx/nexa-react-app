@@ -342,6 +342,16 @@ function Dashboard({ onLogout }) {
   const privyWallet =
     wallets?.[0];
 
+  const userId =
+    profile?.id ||
+    storedUser?.id ||
+    '';
+
+  const userEmail =
+    profile?.email ||
+    storedUser?.email ||
+    '';
+
   const walletSavedInBackend =
     profile?.wallet?.provider ===
       'privy' &&
@@ -358,50 +368,96 @@ function Dashboard({ onLogout }) {
   async function refresh() {
     setRefreshing(true);
 
-    const [
-      profileResult,
-      balanceResult,
-      txResult,
-    ] = await Promise.allSettled([
-      api('/user/me'),
+    try {
+      const safeUserId =
+        userId || storedUser?.id || '';
 
-      api('/wallet/balance'),
+      const [
+        profileResult,
+        balanceResult,
+        txResult,
+      ] =
+        await Promise.allSettled([
+          api('/user/me'),
 
-      api('/transaction/history'),
-    ]);
+          api(
+            `/wallet/balance?userId=${encodeURIComponent(
+              safeUserId,
+            )}`,
+          ),
 
-    if (
-      profileResult.status ===
-      'fulfilled'
-    ) {
-      setProfile(
-        profileResult.value,
-      );
-    }
+          api(
+            `/transaction/history?userId=${encodeURIComponent(
+              safeUserId,
+            )}`,
+          ),
+        ]);
 
-    if (
-      balanceResult.status ===
-      'fulfilled'
-    ) {
-      setBalance(
-        balanceResult.value,
-      );
-    }
+      if (
+        profileResult.status ===
+        'fulfilled'
+      ) {
+        setProfile(
+          profileResult.value,
+        );
+      }
 
-    if (
-      txResult.status ===
-      'fulfilled'
-    ) {
-      setTransactions(
-        Array.isArray(
-          txResult.value,
+      if (
+        balanceResult.status ===
+        'fulfilled'
+      ) {
+        setBalance(
+          balanceResult.value,
+        );
+      }
+
+      if (
+        txResult.status ===
+        'fulfilled'
+      ) {
+        setTransactions(
+          Array.isArray(
+            txResult.value,
+          )
+            ? txResult.value
+            : [],
+        );
+      }
+
+      const errors = [
+        profileResult,
+        balanceResult,
+        txResult,
+      ]
+        .filter(
+          (r) =>
+            r.status ===
+            'rejected',
         )
-          ? txResult.value
-          : [],
-      );
-    }
+        .map(
+          (r) =>
+            r.reason?.message,
+        )
+        .filter(Boolean);
 
-    setRefreshing(false);
+      const visibleErrors =
+        errors.filter(
+          (error) =>
+            !String(error)
+              .toLowerCase()
+              .includes(
+                'forbidden',
+              ),
+        );
+
+      if (visibleErrors.length) {
+        setMessage(
+          visibleErrors.join(' | '),
+        );
+      }
+    } finally {
+      setRefreshing(false);
+    }
   }
 
   async function linkPrivyWalletIfPossible() {
@@ -433,9 +489,11 @@ function Dashboard({ onLogout }) {
 
           body: JSON.stringify({
             userId:
+              userId ||
               storedUser?.id,
 
             email:
+              userEmail ||
               storedUser?.email,
 
             privyUserId:
@@ -474,10 +532,16 @@ function Dashboard({ onLogout }) {
   async function activateDigitalAccount() {
     try {
       if (!ready) {
+        setMessage(
+          'Preparando conta digital...',
+        );
         return;
       }
 
       if (!authenticated) {
+        setMessage(
+          'Abrindo login da conta digital...',
+        );
         await login();
         return;
       }
@@ -519,17 +583,34 @@ function Dashboard({ onLogout }) {
         return;
       }
 
+      const realUserId =
+        userId ||
+        storedUser?.id;
+
+      const realEmail =
+        userEmail ||
+        storedUser?.email;
+
+      if (!realUserId) {
+        setMessage(
+          'Usuário não identificado. Saia e entre novamente.',
+        );
+        return;
+      }
+
+      setMessage(
+        'Gerando depósito Pix...',
+      );
+
       const result = await api(
         '/deposit/pix',
         {
           method: 'POST',
 
           body: JSON.stringify({
-            userId:
-              storedUser?.id,
+            userId: realUserId,
 
-            email:
-              storedUser?.email,
+            email: realEmail,
 
             amount,
 
