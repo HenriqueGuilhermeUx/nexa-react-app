@@ -1,26 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
 import { usePrivy, useWallets } from '@privy-io/react-auth';
-import {
-  Copy,
-  RefreshCcw,
-} from 'lucide-react';
+import { Copy, RefreshCcw, ShieldCheck } from 'lucide-react';
 
 const API_URL =
   import.meta.env.VITE_API_URL ||
   'https://nexa-backend-p2u0.onrender.com/api/v1';
 
 function getToken() {
-  return localStorage.getItem(
-    'nexa_access_token',
-  );
+  return localStorage.getItem('nexa_access_token');
 }
 
 function getStoredUser() {
   try {
-    return JSON.parse(
-      localStorage.getItem('nexa_user') ||
-        'null',
-    );
+    return JSON.parse(localStorage.getItem('nexa_user') || 'null');
   } catch {
     return null;
   }
@@ -29,24 +21,16 @@ function getStoredUser() {
 async function api(path, options = {}) {
   const token = getToken();
 
-  const response = await fetch(
-    `${API_URL}${path}`,
-    {
-      ...options,
-
-      headers: {
-        'Content-Type': 'application/json',
-
-        Authorization: `Bearer ${token}`,
-
-        ...(options.headers || {}),
-      },
+  const response = await fetch(`${API_URL}${path}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      ...(options.headers || {}),
     },
-  );
+  });
 
-  const data = await response
-    .json()
-    .catch(() => null);
+  const data = await response.json().catch(() => null);
 
   if (!response.ok) {
     throw new Error(
@@ -60,13 +44,10 @@ async function api(path, options = {}) {
 }
 
 function moneyBRL(value) {
-  return Number(value || 0).toLocaleString(
-    'pt-BR',
-    {
-      style: 'currency',
-      currency: 'BRL',
-    },
-  );
+  return Number(value || 0).toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  });
 }
 
 function Landing({ onEnter }) {
@@ -79,14 +60,8 @@ function Landing({ onEnter }) {
             Nexa
           </div>
 
-          <div
-            className="actions"
-            style={{ marginTop: 0 }}
-          >
-            <button
-              className="btn btn-primary"
-              onClick={onEnter}
-            >
+          <div className="actions" style={{ marginTop: 0 }}>
+            <button className="btn btn-primary" onClick={onEnter}>
               Entrar
             </button>
           </div>
@@ -95,42 +70,26 @@ function Landing({ onEnter }) {
 
       <section className="container hero">
         <div>
-          <div className="badge">
-            Pix + Dólar Digital
-          </div>
+          <div className="badge">Pix + Dólar Digital</div>
 
           <h1>Cripto sem complicação.</h1>
 
           <p className="subtitle">
-            Deposite Pix em reais e
-            tenha saldo em dólar digital
-            sem seed phrase, bridge,
-            rede, carteira externa ou
-            burocracia.
+            Deposite Pix em reais e tenha saldo em dólar digital sem seed
+            phrase, bridge, rede, carteira externa ou burocracia.
           </p>
 
           <div className="actions">
-            <button
-              className="btn btn-primary"
-              onClick={onEnter}
-            >
+            <button className="btn btn-primary" onClick={onEnter}>
               Começar em 30s
             </button>
           </div>
         </div>
 
         <div className="card">
-          <div className="metric-label">
-            Conta digital global
-          </div>
-
-          <div className="metric-value">
-            USDC + Pix
-          </div>
-
-          <p className="muted">
-            Simples como um banco digital.
-          </p>
+          <div className="metric-label">Conta digital global</div>
+          <div className="metric-value">USDC + Pix</div>
+          <p className="muted">Simples como um banco digital.</p>
         </div>
       </section>
     </div>
@@ -138,70 +97,37 @@ function Landing({ onEnter }) {
 }
 
 function NexaLogin({ onLogged }) {
-  const [email, setEmail] =
-    useState('');
-
-  const [password, setPassword] =
-    useState('');
-
-  const [fullName, setFullName] =
-    useState('');
-
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
   const [cpf, setCpf] = useState('');
-
-  const [phone, setPhone] =
-    useState('');
-
-  const [mode, setMode] =
-    useState('login');
-
-  const [message, setMessage] =
-    useState('');
+  const [phone, setPhone] = useState('');
+  const [mode, setMode] = useState('login');
+  const [message, setMessage] = useState('');
 
   async function submit(event) {
     event.preventDefault();
 
-    setMessage(
-      mode === 'login'
-        ? 'Entrando...'
-        : 'Criando conta...',
-    );
+    setMessage(mode === 'login' ? 'Entrando...' : 'Criando conta...');
 
     try {
       const body =
         mode === 'login'
-          ? {
-              email,
-              password,
-            }
-          : {
-              email,
-              password,
-              fullName,
-              cpf,
-              phone,
-            };
+          ? { email, password }
+          : { email, password, fullName, cpf, phone };
 
       const response = await fetch(
-        `${API_URL}/auth/${
-          mode === 'login'
-            ? 'login'
-            : 'register'
-        }`,
+        `${API_URL}/auth/${mode === 'login' ? 'login' : 'register'}`,
         {
           method: 'POST',
-
           headers: {
-            'Content-Type':
-              'application/json',
+            'Content-Type': 'application/json',
           },
-
           body: JSON.stringify(body),
         },
       );
 
-      const data =
-        await response.json();
+      const data = await response.json();
 
       if (!response.ok) {
         throw new Error(
@@ -211,15 +137,8 @@ function NexaLogin({ onLogged }) {
         );
       }
 
-      localStorage.setItem(
-        'nexa_access_token',
-        data.accessToken,
-      );
-
-      localStorage.setItem(
-        'nexa_user',
-        JSON.stringify(data.user),
-      );
+      localStorage.setItem('nexa_access_token', data.accessToken);
+      localStorage.setItem('nexa_user', JSON.stringify(data.user));
 
       onLogged();
     } catch (error) {
@@ -229,32 +148,16 @@ function NexaLogin({ onLogged }) {
 
   return (
     <div className="page">
-      <div
-        className="container"
-        style={{ maxWidth: 520 }}
-      >
-        <form
-          className="card"
-          onSubmit={submit}
-        >
-          <div
-            className="brand"
-            style={{ marginBottom: 24 }}
-          >
+      <div className="container" style={{ maxWidth: 520 }}>
+        <form className="card" onSubmit={submit}>
+          <div className="brand" style={{ marginBottom: 24 }}>
             <div className="logo">N</div>
             Nexa
           </div>
 
-          <h2>
-            {mode === 'login'
-              ? 'Entrar'
-              : 'Começar em 30s'}
-          </h2>
+          <h2>{mode === 'login' ? 'Entrar' : 'Começar em 30s'}</h2>
 
-          <p className="muted">
-            Conta digital em dólar com
-            Pix integrado.
-          </p>
+          <p className="muted">Conta digital em dólar com Pix integrado.</p>
 
           {mode === 'register' && (
             <>
@@ -262,31 +165,21 @@ function NexaLogin({ onLogged }) {
                 className="input"
                 placeholder="Nome completo"
                 value={fullName}
-                onChange={(e) =>
-                  setFullName(
-                    e.target.value,
-                  )
-                }
+                onChange={(e) => setFullName(e.target.value)}
               />
 
               <input
                 className="input"
                 placeholder="CPF"
                 value={cpf}
-                onChange={(e) =>
-                  setCpf(e.target.value)
-                }
+                onChange={(e) => setCpf(e.target.value)}
               />
 
               <input
                 className="input"
                 placeholder="Telefone"
                 value={phone}
-                onChange={(e) =>
-                  setPhone(
-                    e.target.value,
-                  )
-                }
+                onChange={(e) => setPhone(e.target.value)}
               />
             </>
           )}
@@ -296,9 +189,7 @@ function NexaLogin({ onLogged }) {
             placeholder="E-mail"
             type="email"
             value={email}
-            onChange={(e) =>
-              setEmail(e.target.value)
-            }
+            onChange={(e) => setEmail(e.target.value)}
           />
 
           <input
@@ -306,47 +197,24 @@ function NexaLogin({ onLogged }) {
             placeholder="Senha"
             type="password"
             value={password}
-            onChange={(e) =>
-              setPassword(
-                e.target.value,
-              )
-            }
+            onChange={(e) => setPassword(e.target.value)}
           />
 
-          <button
-            className="btn btn-primary"
-            style={{ width: '100%' }}
-          >
-            {mode === 'login'
-              ? 'Entrar'
-              : 'Criar conta'}
+          <button className="btn btn-primary" style={{ width: '100%' }}>
+            {mode === 'login' ? 'Entrar' : 'Criar conta'}
           </button>
 
-          <p
-            className="muted small"
-            style={{ marginTop: 16 }}
-          >
+          <p className="muted small" style={{ marginTop: 16 }}>
             {message}
           </p>
 
           <button
             type="button"
             className="btn"
-            style={{
-              width: '100%',
-              marginTop: 12,
-            }}
-            onClick={() =>
-              setMode(
-                mode === 'login'
-                  ? 'register'
-                  : 'login',
-              )
-            }
+            style={{ width: '100%', marginTop: 12 }}
+            onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
           >
-            {mode === 'login'
-              ? 'Criar conta'
-              : 'Já tenho conta'}
+            {mode === 'login' ? 'Criar conta' : 'Já tenho conta'}
           </button>
         </form>
       </div>
@@ -355,98 +223,109 @@ function NexaLogin({ onLogged }) {
 }
 
 function Dashboard({ onLogout }) {
-  const { logout } = usePrivy();
+  const {
+    login,
+    logout,
+    authenticated,
+    user: privyUser,
+    ready,
+  } = usePrivy();
 
   const { wallets } = useWallets();
 
-  const [profile, setProfile] =
-    useState(null);
+  const [profile, setProfile] = useState(null);
+  const [balance, setBalance] = useState(null);
+  const [transactions, setTransactions] = useState([]);
+  const [depositAmount, setDepositAmount] = useState('');
+  const [message, setMessage] = useState('');
+  const [linking, setLinking] = useState(false);
 
-  const [balance, setBalance] =
-    useState(null);
-
-  const [
-    transactions,
-    setTransactions,
-  ] = useState([]);
-
-  const [
-    depositAmount,
-    setDepositAmount,
-  ] = useState('');
-
-  const [message, setMessage] =
-    useState('');
-
-  const storedUser = useMemo(
-    getStoredUser,
-    [],
-  );
+  const storedUser = useMemo(getStoredUser, []);
+  const privyWallet = wallets?.[0];
 
   async function refresh() {
-    const [
-      profileResult,
-      balanceResult,
-      txResult,
-    ] = await Promise.allSettled([
-      api('/user/me'),
+    const [profileResult, balanceResult, txResult] =
+      await Promise.allSettled([
+        api('/user/me'),
+        api('/wallet/balance'),
+        api('/transaction/history'),
+      ]);
 
-      api('/wallet/balance'),
-
-      api('/transaction/history'),
-    ]);
-
-    if (
-      profileResult.status ===
-      'fulfilled'
-    ) {
+    if (profileResult.status === 'fulfilled') {
       setProfile(profileResult.value);
     }
 
-    if (
-      balanceResult.status ===
-      'fulfilled'
-    ) {
+    if (balanceResult.status === 'fulfilled') {
       setBalance(balanceResult.value);
     }
 
-    if (
-      txResult.status === 'fulfilled'
-    ) {
-      setTransactions(
-        Array.isArray(
-          txResult.value,
-        )
-          ? txResult.value
-          : [],
-      );
+    if (txResult.status === 'fulfilled') {
+      setTransactions(Array.isArray(txResult.value) ? txResult.value : []);
     }
 
-    const errors = [
-      profileResult,
-      balanceResult,
-      txResult,
-    ]
-      .filter(
-        (r) => r.status === 'rejected',
-      )
+    const errors = [profileResult, balanceResult, txResult]
+      .filter((r) => r.status === 'rejected')
       .map((r) => r.reason?.message)
       .filter(Boolean);
 
-    const visibleErrors =
-      errors.filter(
-        (error) =>
-          !String(error)
-            .toLowerCase()
-            .includes('forbidden'),
-      );
+    const visibleErrors = errors.filter(
+      (error) => !String(error).toLowerCase().includes('forbidden'),
+    );
 
-    if (visibleErrors.length) {
-      setMessage(
-        visibleErrors.join(' | '),
-      );
-    } else {
-      setMessage('');
+    setMessage(visibleErrors.length ? visibleErrors.join(' | ') : '');
+  }
+
+  async function linkPrivyWalletIfPossible() {
+    if (!authenticated || !privyWallet?.address || linking) return;
+
+    const currentAddress = profile?.wallet?.address;
+
+    if (
+      currentAddress &&
+      currentAddress !== 'Wallet ainda não vinculada' &&
+      currentAddress === privyWallet.address
+    ) {
+      return;
+    }
+
+    try {
+      setLinking(true);
+
+      await api('/user/link-privy-wallet', {
+        method: 'POST',
+        body: JSON.stringify({
+          privyUserId: privyUser?.id,
+          walletAddress: privyWallet.address,
+          privyWalletId: privyWallet.id,
+          walletProvider: 'privy',
+          walletNetwork: 'polygon',
+        }),
+      });
+
+      setMessage('Conta digital ativada com sucesso.');
+      await refresh();
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setLinking(false);
+    }
+  }
+
+  async function activateDigitalAccount() {
+    try {
+      if (!ready) {
+        setMessage('Preparando conta digital...');
+        return;
+      }
+
+      if (!authenticated) {
+        await login();
+        return;
+      }
+
+      await linkPrivyWalletIfPossible();
+    } catch (error) {
+      setMessage(error.message);
     }
   }
 
@@ -454,36 +333,31 @@ function Dashboard({ onLogout }) {
     refresh();
   }, []);
 
+  useEffect(() => {
+    if (authenticated && privyWallet?.address) {
+      linkPrivyWalletIfPossible();
+    }
+  }, [authenticated, privyWallet?.address]);
+
   async function createDeposit() {
     try {
-      const amount = Number(
-        depositAmount,
-      );
+      const amount = Number(depositAmount);
 
       if (!amount || amount < 10) {
-        setMessage(
-          'Depósito mínimo: R$ 10',
-        );
-
+        setMessage('Depósito mínimo: R$ 10');
         return;
       }
 
-      const result = await api(
-        '/deposit/pix',
-        {
-          method: 'POST',
-
-          body: JSON.stringify({
-            amount,
-            amountBrl: amount,
-          }),
-        },
-      );
+      const result = await api('/deposit/pix', {
+        method: 'POST',
+        body: JSON.stringify({
+          amount,
+          amountBrl: amount,
+        }),
+      });
 
       setMessage(
-        `Depósito criado: ${Number(
-          result.amountUsdc || 0,
-        ).toFixed(2)} USDC`,
+        `Depósito criado: ${Number(result.amountUsdc || 0).toFixed(2)} USDC`,
       );
 
       setDepositAmount('');
@@ -496,11 +370,15 @@ function Dashboard({ onLogout }) {
 
   function logoutAll() {
     localStorage.clear();
-
     logout();
-
     onLogout();
   }
+
+  const technicalAddress =
+    profile?.wallet?.address || privyWallet?.address || '';
+
+  const digitalAccountActive =
+    authenticated || profile?.wallet?.provider === 'privy';
 
   return (
     <div className="page">
@@ -511,22 +389,13 @@ function Dashboard({ onLogout }) {
             Nexa
           </div>
 
-          <div
-            className="actions"
-            style={{ marginTop: 0 }}
-          >
-            <button
-              className="btn"
-              onClick={refresh}
-            >
+          <div className="actions" style={{ marginTop: 0 }}>
+            <button className="btn" onClick={refresh}>
               <RefreshCcw size={16} />
               Atualizar
             </button>
 
-            <button
-              className="btn"
-              onClick={logoutAll}
-            >
+            <button className="btn" onClick={logoutAll}>
               Sair
             </button>
           </div>
@@ -534,142 +403,104 @@ function Dashboard({ onLogout }) {
       </nav>
 
       <main className="container">
-        <div className="badge">
-          Conta em dólar digital
-        </div>
+        <div className="badge">Conta em dólar digital</div>
 
-        <h1 style={{ fontSize: 48 }}>
-          Painel Nexa
-        </h1>
+        <h1 style={{ fontSize: 48 }}>Painel Nexa</h1>
 
         <p className="muted">
-          Olá,{' '}
-          {profile?.fullName ||
-            storedUser?.fullName ||
-            storedUser?.email}
-          .
+          Olá, {profile?.fullName || storedUser?.fullName || storedUser?.email}.
         </p>
 
-        <div
-          className="grid grid-4"
-          style={{ marginTop: 28 }}
-        >
+        <div className="grid grid-4" style={{ marginTop: 28 }}>
           <div className="card">
-            <div className="metric-label">
-              Saldo USDC
-            </div>
-
+            <div className="metric-label">Saldo USDC</div>
             <div className="metric-value">
-              $
-              {Number(
-                balance?.balances
-                  ?.USDC || 0,
-              ).toFixed(2)}
+              ${Number(balance?.balances?.USDC || 0).toFixed(2)}
             </div>
           </div>
 
           <div className="card">
-            <div className="metric-label">
-              Saldo estimado
-            </div>
-
+            <div className="metric-label">Saldo estimado</div>
             <div className="metric-value">
-              {moneyBRL(
-                balance?.balances
-                  ?.BRL || 0,
-              )}
+              {moneyBRL(balance?.balances?.BRL || 0)}
             </div>
           </div>
 
           <div className="card">
-            <div className="metric-label">
-              Conta digital
-            </div>
-
+            <div className="metric-label">Conta digital</div>
             <div className="metric-value">
-              Ativa
+              {digitalAccountActive ? 'Ativa' : 'Pendente'}
             </div>
           </div>
 
           <div className="card">
-            <div className="metric-label">
-              KYC
-            </div>
-
-            <div className="metric-value">
-              {profile?.kycStatus ||
-                'pending'}
-            </div>
+            <div className="metric-label">KYC</div>
+            <div className="metric-value">{profile?.kycStatus || 'pending'}</div>
           </div>
         </div>
 
-        <section
-          className="card"
-          style={{ marginTop: 24 }}
-        >
-          <h2>
-            Sua conta digital Nexa
-          </h2>
+        <section className="card" style={{ marginTop: 24 }}>
+          <h2>Sua conta digital Nexa</h2>
 
           <p className="muted">
-            Sua conta está preparada
-            para guardar dólar digital
-            e usar Pix sem precisar
-            lidar com rede, seed
-            phrase, bridge ou carteira
+            Sua conta foi pensada para guardar dólar digital e usar Pix sem
+            você precisar lidar com rede, seed phrase, bridge ou carteira
             externa.
           </p>
 
-          <div
-            className="grid grid-2"
-            style={{ marginTop: 20 }}
-          >
+          <div className="grid grid-2" style={{ marginTop: 20 }}>
             <div className="card">
-              <div className="metric-label">
-                Status da conta
-              </div>
-
+              <div className="metric-label">Status da conta</div>
               <div className="metric-value">
-                Ativa
+                {digitalAccountActive ? 'Ativa' : 'Pendente'}
               </div>
             </div>
 
             <div className="card">
-              <div className="metric-label">
-                Tipo de saldo
-              </div>
-
-              <div className="metric-value">
-                USDC
-              </div>
+              <div className="metric-label">Tipo de saldo</div>
+              <div className="metric-value">USDC</div>
             </div>
           </div>
 
-          <details
-            style={{ marginTop: 20 }}
-          >
-            <summary className="muted">
-              Ver endereço técnico da
-              carteira
-            </summary>
-
-            <div
-              className="wallet-box"
-              style={{ marginTop: 12 }}
+          {!digitalAccountActive && (
+            <button
+              className="btn btn-primary"
+              style={{ marginTop: 20 }}
+              onClick={activateDigitalAccount}
+              disabled={linking}
             >
-              {wallets?.[0]?.address ||
-                'Endereço técnico ainda não criado'}
+              <ShieldCheck size={16} />
+              {linking ? 'Ativando...' : 'Ativar conta digital'}
+            </button>
+          )}
+
+          {digitalAccountActive && (
+            <div
+              className="card"
+              style={{
+                marginTop: 20,
+                background: 'rgba(16,185,129,.08)',
+                borderColor: 'rgba(16,185,129,.25)',
+              }}
+            >
+              <strong className="green">Conta digital ativa</strong>
+              <p className="muted small">
+                A infraestrutura de carteira funciona nos bastidores.
+              </p>
+            </div>
+          )}
+
+          <details style={{ marginTop: 20 }}>
+            <summary className="muted">Ver endereço técnico da carteira</summary>
+
+            <div className="wallet-box" style={{ marginTop: 12 }}>
+              {technicalAddress || 'Endereço técnico ainda não criado'}
             </div>
 
             <button
               className="btn"
               style={{ marginTop: 12 }}
-              onClick={() =>
-                navigator.clipboard.writeText(
-                  wallets?.[0]?.address ||
-                    '',
-                )
-              }
+              onClick={() => navigator.clipboard.writeText(technicalAddress)}
             >
               <Copy size={16} />
               Copiar endereço técnico
@@ -677,24 +508,15 @@ function Dashboard({ onLogout }) {
           </details>
         </section>
 
-        <div
-          className="grid grid-2"
-          style={{ marginTop: 24 }}
-        >
+        <div className="grid grid-2" style={{ marginTop: 24 }}>
           <section className="card">
-            <h2>
-              Depositar via Pix
-            </h2>
+            <h2>Depositar via Pix</h2>
 
             <input
               className="input"
               placeholder="Valor em R$"
               value={depositAmount}
-              onChange={(e) =>
-                setDepositAmount(
-                  e.target.value,
-                )
-              }
+              onChange={(e) => setDepositAmount(e.target.value)}
             />
 
             <button
@@ -709,33 +531,16 @@ function Dashboard({ onLogout }) {
           <section className="card">
             <h2>Histórico</h2>
 
-            {transactions.length ===
-              0 && (
-              <p className="muted">
-                Nenhuma transação ainda.
-              </p>
+            {transactions.length === 0 && (
+              <p className="muted">Nenhuma transação ainda.</p>
             )}
 
             {transactions.map((tx) => (
-              <div
-                key={
-                  tx.id ||
-                  tx.reference
-                }
-                className="tx"
-              >
+              <div key={tx.id || tx.reference} className="tx">
                 <div>
-                  <strong>
-                    {tx.description ||
-                      tx.type}
-                  </strong>
-
+                  <strong>{tx.description || tx.type}</strong>
                   <div className="muted small">
-                    {Number(
-                      tx.amountUsdc ||
-                        0,
-                    ).toFixed(2)}{' '}
-                    USDC
+                    {Number(tx.amountUsdc || 0).toFixed(2)} USDC
                   </div>
                 </div>
               </div>
@@ -744,10 +549,7 @@ function Dashboard({ onLogout }) {
         </div>
 
         {message && (
-          <div
-            className="card"
-            style={{ marginTop: 24 }}
-          >
+          <div className="card" style={{ marginTop: 24 }}>
             {message}
           </div>
         )}
@@ -757,38 +559,15 @@ function Dashboard({ onLogout }) {
 }
 
 export default function App() {
-  const [screen, setScreen] =
-    useState(
-      getToken()
-        ? 'dashboard'
-        : 'landing',
-    );
+  const [screen, setScreen] = useState(getToken() ? 'dashboard' : 'landing');
 
   if (screen === 'login') {
-    return (
-      <NexaLogin
-        onLogged={() =>
-          setScreen('dashboard')
-        }
-      />
-    );
+    return <NexaLogin onLogged={() => setScreen('dashboard')} />;
   }
 
   if (screen === 'dashboard') {
-    return (
-      <Dashboard
-        onLogout={() =>
-          setScreen('landing')
-        }
-      />
-    );
+    return <Dashboard onLogout={() => setScreen('landing')} />;
   }
 
-  return (
-    <Landing
-      onEnter={() =>
-        setScreen('login')
-      }
-    />
-  );
+  return <Landing onEnter={() => setScreen('login')} />;
 }
