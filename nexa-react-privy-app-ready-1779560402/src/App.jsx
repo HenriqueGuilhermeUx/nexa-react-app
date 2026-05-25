@@ -60,7 +60,7 @@ function Landing({ onEnter }) {
             Nexa
           </div>
 
-          <button className="btn btn-primary" onClick={onEnter}>
+          <button type="button" className="btn btn-primary" onClick={onEnter}>
             Entrar
           </button>
         </div>
@@ -76,7 +76,7 @@ function Landing({ onEnter }) {
             Pix em reais convertido automaticamente para dólar digital.
           </p>
 
-          <button className="btn btn-primary" onClick={onEnter}>
+          <button type="button" className="btn btn-primary" onClick={onEnter}>
             Começar
           </button>
         </div>
@@ -94,6 +94,8 @@ function Login({ onLogged }) {
     e.preventDefault();
 
     try {
+      setMessage('Entrando...');
+
       const response = await fetch(`${API_URL}/auth/login`, {
         method: 'POST',
         headers: {
@@ -171,22 +173,30 @@ function Dashboard({ onLogout }) {
   const [pixKey, setPixKey] = useState('');
   const [message, setMessage] = useState('');
 
+  const [refreshing, setRefreshing] = useState(false);
+  const [depositing, setDepositing] = useState(false);
+  const [paying, setPaying] = useState(false);
+
   const userId = storedUser?.id;
   const userEmail = storedUser?.email;
   const isAdmin = userEmail === 'henriquecampos66@gmail.com';
 
   async function refresh() {
     try {
+      setRefreshing(true);
+
       const me = await api('/user/me');
       setProfile(me);
 
-      const balanceData = await api(`/wallet/balance?userId=${userId}`);
+      const realUserId = me?.id || userId;
+
+      const balanceData = await api(`/wallet/balance?userId=${realUserId}`);
       setBalance(balanceData);
 
-      const tx = await api(`/transaction/history?userId=${userId}`);
+      const tx = await api(`/transaction/history?userId=${realUserId}`);
       setTransactions(Array.isArray(tx) ? tx : []);
 
-      const ledger = await api(`/ledger/user?userId=${userId}`);
+      const ledger = await api(`/ledger/user?userId=${realUserId}`);
       setLedgerEntries(Array.isArray(ledger) ? ledger : []);
 
       if (isAdmin) {
@@ -201,6 +211,8 @@ function Dashboard({ onLogout }) {
       }
     } catch (error) {
       setMessage(error.message);
+    } finally {
+      setRefreshing(false);
     }
   }
 
@@ -219,6 +231,8 @@ function Dashboard({ onLogout }) {
     if (!privyWallet?.address) return;
 
     try {
+      setMessage('Ativando conta digital...');
+
       await api('/user/link-privy-wallet', {
         method: 'POST',
         body: JSON.stringify({
@@ -232,7 +246,8 @@ function Dashboard({ onLogout }) {
         }),
       });
 
-      refresh();
+      setMessage('Conta digital ativada.');
+      await refresh();
     } catch (error) {
       setMessage(error.message);
     }
@@ -247,6 +262,14 @@ function Dashboard({ onLogout }) {
         return;
       }
 
+      if (!userId) {
+        setMessage('Usuário não identificado. Saia e entre novamente.');
+        return;
+      }
+
+      setDepositing(true);
+      setMessage('Gerando depósito Pix...');
+
       const result = await api('/deposit/pix', {
         method: 'POST',
         body: JSON.stringify({
@@ -257,12 +280,14 @@ function Dashboard({ onLogout }) {
         }),
       });
 
-      setMessage(`Depositado ${Number(result.amountUsdc).toFixed(2)} USDC`);
+      setMessage(`Depositado ${Number(result.amountUsdc || 0).toFixed(2)} USDC`);
       setDepositAmount('');
 
-      refresh();
+      await refresh();
     } catch (error) {
       setMessage(error.message);
+    } finally {
+      setDepositing(false);
     }
   }
 
@@ -270,15 +295,23 @@ function Dashboard({ onLogout }) {
     try {
       const amount = Number(paymentAmount);
 
-      if (!amount || amount <= 0) {
-        setMessage('Informe um valor válido');
+      if (!userId) {
+        setMessage('Usuário não identificado. Saia e entre novamente.');
         return;
       }
 
-      if (!pixKey) {
-        setMessage('Informe a chave Pix');
+      if (!amount || amount <= 0) {
+        setMessage('Informe um valor válido para o Pix.');
         return;
       }
+
+      if (!pixKey || pixKey.trim().length < 3) {
+        setMessage('Informe a chave Pix.');
+        return;
+      }
+
+      setPaying(true);
+      setMessage('Processando pagamento Pix...');
 
       const result = await api('/payment/pix', {
         method: 'POST',
@@ -287,12 +320,12 @@ function Dashboard({ onLogout }) {
           email: userEmail,
           amount,
           amountBrl: amount,
-          pixKey,
+          pixKey: pixKey.trim(),
         }),
       });
 
       setMessage(
-        `Pix pago: ${moneyBRL(result.amountBRL)} / ${Number(
+        `Pix processado: ${moneyBRL(result.amountBRL)} / ${Number(
           result.debitedUSDC || 0,
         ).toFixed(4)} USDC debitado`,
       );
@@ -300,9 +333,11 @@ function Dashboard({ onLogout }) {
       setPaymentAmount('');
       setPixKey('');
 
-      refresh();
+      await refresh();
     } catch (error) {
-      setMessage(error.message);
+      setMessage(`Erro no Pix: ${error.message}`);
+    } finally {
+      setPaying(false);
     }
   }
 
@@ -322,12 +357,12 @@ function Dashboard({ onLogout }) {
           </div>
 
           <div style={{ display: 'flex', gap: 12 }}>
-            <button className="btn" onClick={refresh}>
+            <button type="button" className="btn" onClick={refresh} disabled={refreshing}>
               <RefreshCcw size={16} />
-              Atualizar
+              {refreshing ? 'Atualizando...' : 'Atualizar'}
             </button>
 
-            <button className="btn" onClick={logoutAll}>
+            <button type="button" className="btn" onClick={logoutAll}>
               Sair
             </button>
           </div>
@@ -361,7 +396,7 @@ function Dashboard({ onLogout }) {
 
           <div className="card">
             <div className="metric-label">KYC</div>
-            <div className="metric-value">{profile?.kycStatus}</div>
+            <div className="metric-value">{profile?.kycStatus || 'pending'}</div>
           </div>
         </div>
 
@@ -369,7 +404,7 @@ function Dashboard({ onLogout }) {
           <h2>Conta Digital</h2>
 
           {!profile?.wallet?.address && (
-            <button className="btn btn-primary" onClick={activateWallet}>
+            <button type="button" className="btn btn-primary" onClick={activateWallet}>
               <ShieldCheck size={16} />
               Ativar conta digital
             </button>
@@ -382,10 +417,9 @@ function Dashboard({ onLogout }) {
               <div className="wallet-box">{profile.wallet.address}</div>
 
               <button
+                type="button"
                 className="btn"
-                onClick={() =>
-                  navigator.clipboard.writeText(profile.wallet.address)
-                }
+                onClick={() => navigator.clipboard.writeText(profile.wallet.address)}
               >
                 <Copy size={16} />
                 Copiar
@@ -405,8 +439,13 @@ function Dashboard({ onLogout }) {
               onChange={(e) => setDepositAmount(e.target.value)}
             />
 
-            <button className="btn btn-primary" onClick={createDeposit}>
-              Depositar
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={createDeposit}
+              disabled={depositing}
+            >
+              {depositing ? 'Depositando...' : 'Depositar'}
             </button>
           </section>
 
@@ -427,8 +466,13 @@ function Dashboard({ onLogout }) {
               onChange={(e) => setPixKey(e.target.value)}
             />
 
-            <button className="btn btn-primary" onClick={payPix}>
-              Pagar Pix
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={payPix}
+              disabled={paying}
+            >
+              {paying ? 'Processando...' : 'Pagar Pix'}
             </button>
           </section>
         </div>
@@ -465,11 +509,7 @@ function Dashboard({ onLogout }) {
                 </div>
 
                 <div style={{ textAlign: 'right' }}>
-                  <strong
-                    className={
-                      entry.direction === 'credit' ? 'green' : 'red'
-                    }
-                  >
+                  <strong className={entry.direction === 'credit' ? 'green' : 'red'}>
                     {entry.direction === 'credit' ? '+' : '-'}{' '}
                     {Number(entry.amount || 0).toFixed(
                       entry.asset === 'BRL' ? 2 : 8,
