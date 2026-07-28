@@ -1,0 +1,58 @@
+name: Nexa Privy Web CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nexa-privy-web-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      VITE_API_URL: https://nexa-backend-p2u0.onrender.com/api/v1
+      VITE_PRIVY_APP_ID: cmpen2gm3007v0cjswjlyefji
+      VITE_PRIVY_CLIENT_ID: client-web-ci-placeholder
+      VITE_BASE_PATH: /
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20.19.4
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Validate secure Privy web contract
+        run: npm run validate:contract
+
+      - name: Build production portal
+        run: npm run build
+
+      - name: Verify deploy output
+        run: |
+          test -s dist/index.html
+          test -d dist/assets
+          ! grep -R -E "PRIVY_APP_SECRET|PRIVY_SECRET_KEY|/user/link-privy-wallet|privyUserId" dist
+          grep -R -q "direct-settlement/wallet/link" dist
+          grep -R -q "x-privy-access-token" dist
+
+      - name: Upload validated portal artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexa-privy-web-portal
+          path: dist
+          if-no-files-found: error
+          retention-days: 14
