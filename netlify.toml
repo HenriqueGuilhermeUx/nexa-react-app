@@ -1,7 +1,12 @@
-# Netlify redirects/proxy for TryNexa
-# This makes https://trynexa.com.br/admin open the Nexa Admin Center
-# while keeping the browser on the TryNexa domain.
+[build]
+  command = "npm install --no-audit --no-fund && npm run check"
+  publish = "dist"
 
+[build.environment]
+  NODE_VERSION = "20.19.4"
+  NPM_FLAGS = "--no-audit --no-fund"
+
+# Proxies operacionais existentes. As regras específicas devem vir antes do SPA.
 [[redirects]]
   from = "/admin"
   to = "https://nexa-backend-p2u0.onrender.com/api/v1/admin/portal"
@@ -25,3 +30,8 @@
   to = "https://nexa-backend-p2u0.onrender.com/docs"
   status = 200
   force = true
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
