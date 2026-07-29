@@ -4,6 +4,9 @@ import path from 'node:path';
 const root = process.cwd();
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const app = read('src/App.jsx');
+const redemption = read('src/RedemptionHistory.jsx');
+const redemptionPortal = read('src/RedemptionPortal.jsx');
+const styles = read('src/styles.css');
 const main = read('src/main.jsx');
 const pkg = JSON.parse(read('package.json'));
 
@@ -37,7 +40,30 @@ rejectText(app, 'PRIVY_SECRET_KEY', 'Secret Key no frontend');
 rejectText(app, 'privateKey', 'private key no frontend');
 rejectText(app, 'seedPhrase', 'seed phrase no frontend');
 
+requireText(redemption, '/payment/user', 'consulta de resgates Pix do usuário');
+requireText(redemption, 'BRL líquido da venda', 'resultado real da venda');
+requireText(redemption, 'Fee Nexa', 'fee Nexa separada');
+requireText(redemption, 'Pix Out', 'custo Pix Out separado');
+requireText(redemption, 'Pix enviado', 'valor final enviado');
+requireText(redemption, 'Estimativa antes da venda', 'identificação da estimativa');
+requireText(redemption, 'Este valor não é garantido', 'aviso de valor não garantido');
+requireText(redemption, 'Até 1 dia útil', 'prazo operacional');
+requireText(redemption, 'endToEndId', 'referência final do Pix');
+rejectText(redemption, 'nexaFeeBrl =', 'cálculo de fee no navegador');
+rejectText(redemption, 'pixOutFeeBrl =', 'cálculo de Pix Out no navegador');
+rejectText(redemption, 'saleProceedsBrl -', 'cálculo financeiro final no navegador');
+
+requireText(redemptionPortal, "document.querySelector('.portal-content')", 'montagem somente no dashboard autenticado');
+requireText(redemptionPortal, 'createPortal', 'portal React isolado');
+requireText(redemptionPortal, 'readAccessToken', 'uso da sessão Nexa existente');
+requireText(redemptionPortal, 'MutationObserver', 'sincronização com login e logout');
+rejectText(redemptionPortal, 'x-privy-access-token', 'token Privy desnecessário no histórico');
+
+requireText(styles, '.redemption-section', 'estilos do extrato de resgates');
+requireText(styles, '.status-danger', 'estado visual de falha');
+
 requireText(main, 'PrivyProvider', 'PrivyProvider');
+requireText(main, 'RedemptionPortal', 'montagem do extrato reconciliado');
 requireText(main, "loginMethods: ['email']", 'login Privy por e-mail');
 requireText(main, "createOnLogin: 'users-without-wallets'", 'configuração de embedded wallet');
 requireText(main, 'VITE_PRIVY_APP_ID', 'App ID público por variável');
@@ -58,9 +84,14 @@ if (failures.length) {
 
 console.log(JSON.stringify({
   ok: true,
-  contract: 'nexa-web-privy-v1',
+  contract: 'nexa-web-privy-v2',
   walletLinkEndpoint: '/direct-settlement/wallet/link',
   walletAuditEndpoint: '/direct-settlement/wallet/audit',
+  redemptionHistoryEndpoint: '/payment/user',
+  redemptionMountedOnlyInsideAuthenticatedPortal: true,
+  actualSaleSettlementDisplayed: true,
+  estimateSeparatedFromFinalPayout: true,
+  feeCalculatedByBackendOnly: true,
   privyIdentityDerivedFromVerifiedAccessToken: true,
   legacyBetaPreserved: true,
   financialExecutionIntroduced: false,
