@@ -1,0 +1,69 @@
+name: Patch reconciled redemption history
+
+on:
+  push:
+    branches:
+      - feat/reconciled-redemption-history
+    paths:
+      - .github/workflows/patch-redemption-history.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/reconciled-redemption-history
+          fetch-depth: 0
+
+      - name: Integrate the redemption component into the dashboard
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('src/App.jsx')
+          text = path.read_text(encoding='utf-8')
+
+          import_anchor = "} from '@privy-io/react-auth';\n"
+          import_line = "\nimport RedemptionHistory from './RedemptionHistory';\n"
+          if import_line.strip() not in text:
+              if text.count(import_anchor) != 1:
+                  raise SystemExit('Privy import anchor not found exactly once')
+              text = text.replace(import_anchor, import_anchor + import_line, 1)
+
+          render_anchor = '''        </section>
+      </main>
+    </div>
+  );
+}
+
+export default function App() {
+'''
+          render_block = '''        </section>
+
+        <RedemptionHistory accessToken={session?.accessToken} />
+      </main>
+    </div>
+  );
+}
+
+export default function App() {
+'''
+          if '<RedemptionHistory accessToken={session?.accessToken} />' not in text:
+              if text.count(render_anchor) != 1:
+                  raise SystemExit('Dashboard render anchor not found exactly once')
+              text = text.replace(render_anchor, render_block, 1)
+
+          path.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Commit dashboard integration
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/App.jsx
+          git commit -m "Render reconciled Pix redemptions in web portal"
+          git push origin HEAD:feat/reconciled-redemption-history
