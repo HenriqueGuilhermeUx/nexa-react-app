@@ -5,6 +5,7 @@ const root = process.cwd();
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const app = read('src/App.jsx');
 const redemption = read('src/RedemptionHistory.jsx');
+const redemptionPortal = read('src/RedemptionPortal.jsx');
 const styles = read('src/styles.css');
 const main = read('src/main.jsx');
 const pkg = JSON.parse(read('package.json'));
@@ -26,7 +27,6 @@ requireText(app, 'useCreateWallet', 'criação manual de embedded wallet no logi
 requireText(app, 'createWallet()', 'execução de criação da embedded wallet');
 requireText(app, "settlementProfile === 'direct_settlement'", 'separação de perfil direct settlement');
 requireText(app, 'isLegacyBeta', 'preservação do fluxo Beta/Legado');
-requireText(app, 'RedemptionHistory', 'histórico reconciliado de resgate no dashboard');
 requireText(app, 'PRIVY_EMAIL', 'mensagem/código de proteção de e-mail do backend não é obrigatório no cliente');
 
 // O requisito acima é semântico no backend, não deve obrigar uma string de erro no frontend.
@@ -52,10 +52,18 @@ requireText(redemption, 'endToEndId', 'referência final do Pix');
 rejectText(redemption, 'nexaFeeBrl =', 'cálculo de fee no navegador');
 rejectText(redemption, 'pixOutFeeBrl =', 'cálculo de Pix Out no navegador');
 rejectText(redemption, 'saleProceedsBrl -', 'cálculo financeiro final no navegador');
+
+requireText(redemptionPortal, "document.querySelector('.portal-content')", 'montagem somente no dashboard autenticado');
+requireText(redemptionPortal, 'createPortal', 'portal React isolado');
+requireText(redemptionPortal, 'readAccessToken', 'uso da sessão Nexa existente');
+requireText(redemptionPortal, 'MutationObserver', 'sincronização com login e logout');
+rejectText(redemptionPortal, 'x-privy-access-token', 'token Privy desnecessário no histórico');
+
 requireText(styles, '.redemption-section', 'estilos do extrato de resgates');
 requireText(styles, '.status-danger', 'estado visual de falha');
 
 requireText(main, 'PrivyProvider', 'PrivyProvider');
+requireText(main, 'RedemptionPortal', 'montagem do extrato reconciliado');
 requireText(main, "loginMethods: ['email']", 'login Privy por e-mail');
 requireText(main, "createOnLogin: 'users-without-wallets'", 'configuração de embedded wallet');
 requireText(main, 'VITE_PRIVY_APP_ID', 'App ID público por variável');
@@ -80,6 +88,7 @@ console.log(JSON.stringify({
   walletLinkEndpoint: '/direct-settlement/wallet/link',
   walletAuditEndpoint: '/direct-settlement/wallet/audit',
   redemptionHistoryEndpoint: '/payment/user',
+  redemptionMountedOnlyInsideAuthenticatedPortal: true,
   actualSaleSettlementDisplayed: true,
   estimateSeparatedFromFinalPayout: true,
   feeCalculatedByBackendOnly: true,
