@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import {PrivyProvider} from '@privy-io/react-auth';
 import App from './App.jsx';
+import RedemptionPortal from './RedemptionPortal.jsx';
 import './styles.css';
 
 const appId = import.meta.env.VITE_PRIVY_APP_ID || 'cmpen2gm3007v0cjswjlyefji';
@@ -32,6 +33,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <PrivyProvider {...providerProps}>
       <App />
+      <RedemptionPortal />
     </PrivyProvider>
   </React.StrictMode>,
 );
