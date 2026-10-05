@@ -135,6 +135,24 @@ function shortenAddress(address) {
 function StatusPill({tone = 'neutral', children}) {
   return <span className={`status status-${tone}`}>{children}</span>;
 }
+function BrandLockup({portal = false}) {
+  return (
+    <a className="brand" href="https://trynexa.com.br" aria-label="Nexa Wallet">
+      <img
+        className="brand-icon"
+        src={`${import.meta.env.BASE_URL}icon.svg`}
+        alt=""
+      />
+      <span className="brand-copy">
+        <span className="brand-wordmark">
+          NEX<span>A</span>
+        </span>
+        <small>{portal ? 'WALLET · PORTAL' : 'WALLET'}</small>
+      </span>
+    </a>
+  );
+}
+
 
 function NexaAuth({onAuthenticated}) {
   const [mode, setMode] = useState('login');
@@ -187,16 +205,12 @@ function NexaAuth({onAuthenticated}) {
   return (
     <main className="auth-page">
       <section className="auth-copy">
-        <a className="brand" href="https://trynexa.com.br">
-          <span className="brand-mark">N</span>
-          <span>Nexa</span>
-        </a>
+        <BrandLockup />
         <StatusPill tone="info">Cripto sem complicação</StatusPill>
-        <h1>Uma conta. Uma carteira. Em qualquer lugar.</h1>
+        <h1>Sua wallet. Seus ativos.</h1>
         <p>
-          Use o mesmo acesso no site e no aplicativo. A tecnologia de carteira
-          funciona por trás da experiência, sem rede, bridge ou seed phrase no
-          seu caminho.
+          Use o mesmo acesso no site e no aplicativo. A tecnologia fica por
+          trás da experiência enquanto sua carteira permanece no centro.
         </p>
       </section>
 
@@ -218,11 +232,11 @@ function NexaAuth({onAuthenticated}) {
           </button>
         </div>
 
-        <h2>{mode === 'login' ? 'Acesse sua Nexa' : 'Abra sua conta'}</h2>
+        <h2>{mode === 'login' ? 'Bem-vindo de volta' : 'Crie sua Nexa'}</h2>
         <p className="muted">
           {mode === 'login'
-            ? 'Use o mesmo e-mail e senha do aplicativo.'
-            : 'Seu acesso web também funcionará no app.'}
+            ? 'Acesse sua Nexa Wallet com o mesmo e-mail do aplicativo.'
+            : 'Sua wallet começa aqui. O mesmo acesso também funcionará no app.'}
         </p>
 
         {mode === 'register' && (
@@ -381,10 +395,7 @@ function Dashboard({session, user, profile, history, onRefresh, onLogout}) {
   return (
     <div className="portal-page">
       <header className="topbar">
-        <a className="brand" href="https://trynexa.com.br">
-          <span className="brand-mark">N</span>
-          <span>Portal Nexa</span>
-        </a>
+        <BrandLockup portal />
         <div className="topbar-actions">
           <button className="secondary-button" onClick={onRefresh}>
             Atualizar
