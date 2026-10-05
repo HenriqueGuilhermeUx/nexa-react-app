@@ -18,7 +18,7 @@ const providerProps = {
     loginMethods: ['email'],
     appearance: {
       theme: 'dark',
-      accentColor: '#6366f1',
+      accentColor: '#31D7FF',
       showWalletLoginFirst: false,
     },
     embeddedWallets: {
