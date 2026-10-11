@@ -132,6 +132,73 @@ function shortenAddress(address) {
   return `${address.slice(0, 7)}…${address.slice(-5)}`;
 }
 
+
+const WALLET_ACTION_KEY = 'nexa_wallet_action_v148';
+
+function readWalletAction() {
+  try {
+    const raw = sessionStorage.getItem(WALLET_ACTION_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed?.type !== 'direct-transfer') return null;
+    const receiverUsername = String(parsed.receiverUsername || '').replace(/^@/, '').trim();
+    const amountUsdc = Number(parsed.amountUsdc);
+    if (!receiverUsername || !(amountUsdc > 0)) return null;
+    return {type: 'direct-transfer', receiverUsername, amountUsdc};
+  } catch {
+    return null;
+  }
+}
+
+function clearWalletAction() {
+  sessionStorage.removeItem(WALLET_ACTION_KEY);
+}
+
+async function walletProvider(wallet) {
+  if (!wallet) throw new Error('Sua wallet Privy não está disponível neste navegador.');
+  if (typeof wallet.getEthereumProvider === 'function') {
+    return wallet.getEthereumProvider();
+  }
+  if (typeof wallet.getProvider === 'function') {
+    return wallet.getProvider();
+  }
+  throw new Error('A wallet Privy não expôs o provedor de assinatura.');
+}
+
+async function sendPreparedTransaction(wallet, transaction) {
+  const provider = await walletProvider(wallet);
+  const expected = String(transaction?.from || wallet?.address || '').toLowerCase();
+  const active = String(wallet?.address || '').toLowerCase();
+  if (!expected || !active || expected !== active) {
+    throw new Error('A wallet Privy ativa não corresponde à wallet vinculada à sua conta Nexa.');
+  }
+
+  const current = String(await provider.request({method: 'eth_chainId'})).toLowerCase();
+  if (current !== '0x89' && current !== '137') {
+    await provider.request({
+      method: 'wallet_switchEthereumChain',
+      params: [{chainId: '0x89'}],
+    });
+  }
+
+  const request = {
+    from: transaction.from,
+    to: transaction.to,
+    data: transaction.data,
+    value: transaction.value || '0x0',
+  };
+  if (transaction.gas) request.gas = transaction.gas;
+  if (transaction.gasPrice) request.gasPrice = transaction.gasPrice;
+
+  const hash = String(
+    await provider.request({method: 'eth_sendTransaction', params: [request]}),
+  ).trim();
+  if (!/^0x[a-fA-F0-9]{64}$/.test(hash)) {
+    throw new Error('A wallet não retornou um hash de transação válido.');
+  }
+  return hash;
+}
+
 function StatusPill({tone = 'neutral', children}) {
   return <span className={`status status-${tone}`}>{children}</span>;
 }
@@ -497,6 +564,264 @@ function Dashboard({session, user, profile, history, onRefresh, onLogout}) {
   );
 }
 
+
+function WalletActionPanel({action, session, user, profile, wallet, onDone, onCancel}) {
+  const [prepared, setPrepared] = useState(null);
+  const [hash, setHash] = useState('');
+  const [confirmation, setConfirmation] = useState(null);
+  const [working, setWorking] = useState(false);
+  const [error, setError] = useState('');
+
+  const linkedAddress = String(
+    profile?.wallet?.address || user?.walletAddress || '',
+  ).toLowerCase();
+  const activeAddress = String(wallet?.address || '').toLowerCase();
+  const walletMatches = Boolean(
+    linkedAddress && activeAddress && linkedAddress === activeAddress,
+  );
+
+  async function prepare() {
+    setWorking(true);
+    setError('');
+    setPrepared(null);
+    setConfirmation(null);
+    setHash('');
+    try {
+      const response = await apiFetch(
+        '/wallet-v15/transfer/onchain-direct/prepare',
+        session.accessToken,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            receiverUsername: action.receiverUsername,
+            amountUsdc: action.amountUsdc,
+          }),
+        },
+      );
+      if (response?.route !== 'ONCHAIN_DIRECT' || !response?.transactionRequest) {
+        throw new Error('A transferência direta não está disponível para este destinatário.');
+      }
+      setPrepared(response);
+    } catch (caught) {
+      setError(caught?.message || 'Não foi possível preparar a transferência.');
+    } finally {
+      setWorking(false);
+    }
+  }
+
+  async function confirm(hashValue) {
+    return apiFetch(
+      '/wallet-v15/transfer/onchain-direct/confirm',
+      session.accessToken,
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          receiverUsername:
+            prepared?.receiver?.username || action.receiverUsername,
+          amountUsdc: Number(prepared?.amountUsdc || action.amountUsdc),
+          txHash: hashValue,
+        }),
+      },
+    );
+  }
+
+  async function authorize() {
+    if (!prepared?.transactionRequest || !walletMatches) return;
+    setWorking(true);
+    setError('');
+    try {
+      const txHash = await sendPreparedTransaction(
+        wallet,
+        prepared.transactionRequest,
+      );
+      setHash(txHash);
+      const result = await confirm(txHash);
+      setConfirmation(result);
+      if (result?.completed === true) {
+        clearWalletAction();
+      }
+    } catch (caught) {
+      setError(caught?.message || 'Não foi possível autorizar a transferência.');
+    } finally {
+      setWorking(false);
+    }
+  }
+
+  async function checkAgain() {
+    if (!hash) return;
+    setWorking(true);
+    setError('');
+    try {
+      const result = await confirm(hash);
+      setConfirmation(result);
+      if (result?.completed === true) clearWalletAction();
+    } catch (caught) {
+      setError(caught?.message || 'Não foi possível atualizar a confirmação.');
+    } finally {
+      setWorking(false);
+    }
+  }
+
+  const completed = confirmation?.completed === true;
+
+  return (
+    <main className="center-page">
+      <section className="activation-card wallet-action-card">
+        <BrandLockup portal />
+        <span className="eyebrow">NEXA WALLET · BUILD 148</span>
+        <h1>Autorizar envio na sua wallet</h1>
+        <p>
+          A Nexa preparou a transferência. A assinatura acontece aqui, na sua
+          própria wallet Privy.
+        </p>
+
+        <div className="action-review">
+          <div>
+            <span>Destinatário</span>
+            <strong>@{action.receiverUsername}</strong>
+          </div>
+          <div>
+            <span>Valor</span>
+            <strong>
+              {Number(action.amountUsdc).toLocaleString('pt-BR', {
+                maximumFractionDigits: 8,
+              })}{' '}
+              USDC
+            </strong>
+          </div>
+          <div>
+            <span>Rede</span>
+            <strong>Polygon</strong>
+          </div>
+        </div>
+
+        {!walletMatches ? (
+          <div className="notice notice-danger">
+            A wallet Privy desta sessão não corresponde à wallet vinculada à sua
+            conta Nexa. Nenhuma assinatura será permitida.
+          </div>
+        ) : null}
+
+        {!prepared && !completed ? (
+          <button
+            className="primary-button"
+            onClick={prepare}
+            disabled={working || !walletMatches}
+          >
+            {working ? 'Preparando…' : 'Revisar transferência'}
+          </button>
+        ) : null}
+
+        {prepared && !hash ? (
+          <>
+            <div className="notice notice-info">
+              Confira o @username e o valor. Operações confirmadas na blockchain
+              podem ser irreversíveis.
+            </div>
+            <button
+              className="primary-button"
+              onClick={authorize}
+              disabled={working || !walletMatches}
+            >
+              {working ? 'Aguardando autorização…' : 'Autorizar na wallet Privy'}
+            </button>
+          </>
+        ) : null}
+
+        {hash ? (
+          <div className="tx-result">
+            <span>Transação enviada</span>
+            <code>{hash}</code>
+            {completed ? (
+              <strong className="success-copy">Transferência confirmada.</strong>
+            ) : (
+              <button
+                className="secondary-button"
+                onClick={checkAgain}
+                disabled={working}
+              >
+                {working ? 'Atualizando…' : 'Atualizar confirmação'}
+              </button>
+            )}
+          </div>
+        ) : null}
+
+        {error ? <p className="form-message error">{error}</p> : null}
+
+        <div className="action-footer">
+          <button className="text-button" onClick={onCancel}>
+            Cancelar
+          </button>
+          {completed ? (
+            <button className="secondary-button" onClick={onDone}>
+              Voltar para a Nexa Wallet
+            </button>
+          ) : null}
+        </div>
+
+        <p className="security-note">
+          A Nexa nunca recebe sua chave privada ou frase-semente.
+        </p>
+      </section>
+    </main>
+  );
+}
+
+function WalletActionIdentity({email, code, setCode, otpState, message, onConfirm, onResend, onCancel, onSwitchPrivy, emailMismatch}) {
+  return (
+    <main className="center-page">
+      <section className="activation-card compact">
+        <BrandLockup portal />
+        <span className="eyebrow">AUTORIZAÇÃO PRIVY · BUILD 148</span>
+        <h1>Confirme sua wallet para continuar</h1>
+        <p>
+          O envio sai da sua própria wallet. Confirme o mesmo e-mail da sua
+          conta Nexa antes de assinar.
+        </p>
+        {emailMismatch ? (
+          <>
+            <div className="notice notice-danger">
+              Há outra sessão Privy ativa neste navegador.
+            </div>
+            <button className="secondary-button" onClick={onSwitchPrivy}>
+              Trocar sessão Privy
+            </button>
+          </>
+        ) : (
+          <>
+            <label className="field">
+              <span>Código enviado para {email}</span>
+              <input
+                value={code}
+                onChange={(event) => setCode(event.target.value)}
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                placeholder="000000"
+              />
+            </label>
+            <button
+              className="primary-button"
+              onClick={onConfirm}
+              disabled={code.length < 4 || otpState === 'confirming'}
+            >
+              {otpState === 'confirming' ? 'Confirmando…' : 'Confirmar e continuar'}
+            </button>
+            <button
+              className="text-button"
+              onClick={onResend}
+              disabled={otpState === 'sending'}
+            >
+              Reenviar código
+            </button>
+          </>
+        )}
+        <p className="form-message" aria-live="polite">{message}</p>
+        <button className="text-button" onClick={onCancel}>Cancelar operação</button>
+      </section>
+    </main>
+  );
+}
+
 export default function App() {
   const {
     ready: privyReady,
@@ -522,6 +847,7 @@ export default function App() {
   const [message, setMessage] = useState('');
   const [otpState, setOtpState] = useState('idle');
   const [code, setCode] = useState('');
+  const [walletAction, setWalletAction] = useState(() => readWalletAction());
 
   const creatingWalletRef = useRef(false);
   const linkingWalletRef = useRef(false);
@@ -615,10 +941,15 @@ export default function App() {
   );
 
   useEffect(() => {
-    if (needsWallet && privyReady && !authenticated && otpState === 'idle') {
+    if (
+      (needsWallet || walletAction) &&
+      privyReady &&
+      !authenticated &&
+      otpState === 'idle'
+    ) {
       requestOtp(false);
     }
-  }, [authenticated, needsWallet, otpState, privyReady, requestOtp]);
+  }, [authenticated, needsWallet, otpState, privyReady, requestOtp, walletAction]);
 
   async function confirmOtp() {
     if (code.length < 4) return;
@@ -758,6 +1089,18 @@ export default function App() {
       .catch(() => null);
   }, [isDirect, loadContext, profile?.wallet?.linked, session?.accessToken]);
 
+  function cancelWalletAction() {
+    clearWalletAction();
+    setWalletAction(null);
+    window.location.href = '/wallet-v148.html?tab=send';
+  }
+
+  function finishWalletAction() {
+    clearWalletAction();
+    setWalletAction(null);
+    window.location.href = '/wallet-v148.html?tab=history';
+  }
+
   async function logoutAll() {
     clearNexaSession();
     setSession(null);
@@ -796,6 +1139,23 @@ export default function App() {
     );
   }
 
+  if (walletAction && (!authenticated || emailMismatch)) {
+    return (
+      <WalletActionIdentity
+        email={nexaEmail}
+        code={code}
+        setCode={setCode}
+        otpState={otpState}
+        message={message}
+        onConfirm={confirmOtp}
+        onResend={() => requestOtp(true)}
+        onCancel={cancelWalletAction}
+        onSwitchPrivy={switchPrivyAccount}
+        emailMismatch={emailMismatch}
+      />
+    );
+  }
+
   if (needsWallet) {
     return (
       <WalletActivation
@@ -808,6 +1168,20 @@ export default function App() {
         onResend={() => requestOtp(true)}
         onSwitchPrivy={switchPrivyAccount}
         emailMismatch={emailMismatch}
+      />
+    );
+  }
+
+  if (walletAction) {
+    return (
+      <WalletActionPanel
+        action={walletAction}
+        session={session}
+        user={user}
+        profile={profile}
+        wallet={embeddedWallet}
+        onDone={finishWalletAction}
+        onCancel={cancelWalletAction}
       />
     );
   }

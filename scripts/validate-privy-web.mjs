@@ -21,6 +21,10 @@ const rejectText = (source, value, label) => {
 requireText(app, "/direct-settlement/profile", 'consulta do perfil direct settlement');
 requireText(app, "/direct-settlement/wallet/link", 'endpoint seguro wallet/link');
 requireText(app, "/direct-settlement/wallet/audit", 'endpoint wallet/audit');
+requireText(app, "/wallet-v15/transfer/onchain-direct/prepare", 'preparo Wallet-First de transferência direta');
+requireText(app, "/wallet-v15/transfer/onchain-direct/confirm", 'confirmação Wallet-First de transferência direta');
+requireText(app, "eth_sendTransaction", 'assinatura client-side da transferência pela wallet Privy');
+requireText(app, "WALLET_ACTION_KEY", 'ponte de ação Wallet-First restrita à sessão do navegador');
 requireText(app, "'x-privy-access-token'", 'header separado do token Privy');
 requireText(app, 'getAccessToken()', 'obtenção do access token Privy');
 requireText(app, 'useCreateWallet', 'criação manual de embedded wallet no login whitelabel');
@@ -94,6 +98,6 @@ console.log(JSON.stringify({
   feeCalculatedByBackendOnly: true,
   privyIdentityDerivedFromVerifiedAccessToken: true,
   legacyBetaPreserved: true,
-  financialExecutionIntroduced: false,
+  financialExecutionIntroduced: 'direct-transfer-only-with-user-privy-signature',
   secretsInFrontend: false,
 }, null, 2));
