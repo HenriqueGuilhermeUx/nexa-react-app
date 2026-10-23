@@ -5,6 +5,8 @@ on:
       - feat/nexa-walletconnect-br-global-isolated
     paths:
       - 'src/ExternalWalletConnect.jsx'
+      - 'src/walletConnectChallenge.mjs'
+      - 'scripts/wallet-connect-challenge.test.mjs'
       - 'src/App.jsx'
       - 'src/styles.css'
       - 'scripts/validate-wallet-connect-isolated.mjs'
@@ -35,7 +37,9 @@ jobs:
       - name: Verify existing wallet and redemption contract
         run: npm run validate:contract
       - name: Reject unsafe or missing Wallet Connect flows
-        run: node scripts/validate-wallet-connect-isolated.mjs
+        run: |
+          node scripts/wallet-connect-challenge.test.mjs
+          node scripts/validate-wallet-connect-isolated.mjs
       - name: Build isolated website
         run: npm run build
       - name: Verify compiled app
