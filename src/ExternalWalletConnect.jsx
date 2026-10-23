@@ -1,5 +1,6 @@
 import {useEffect, useMemo, useState} from 'react';
 import {useConnectWallet, usePrivy, useWallets} from '@privy-io/react-auth';
+import {verifyNexaWalletChallenge} from './walletConnectChallenge.mjs';
 
 const ADDRESS=/^0x[0-9a-fA-F]{40}$/;
 const CHALLENGE=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -73,7 +74,10 @@ export default function ExternalWalletConnect({accessToken,nexaEmail}){
     }
   },[walletsReady,candidates,selected]);
   useEffect(()=>{
-    if(!emailMatch||!accessToken||!LAB_ENABLED)return;
+    if(!emailMatch||!accessToken||!LAB_ENABLED){
+      setLinks([]);
+      return;
+    }
     let active=true;
     labApi('/wallet-connect-inbound/ownership/links',accessToken)
       .then(data=>{if(active)setLinks(Array.isArray(data?.wallets)?data.wallets:[]);})
@@ -124,8 +128,14 @@ export default function ExternalWalletConnect({accessToken,nexaEmail}){
          Date.parse(challenge.expiresAt)<=Date.now()){
         throw Error('Desafio da Nexa inválido ou expirado. Nenhuma assinatura realizada.');
       }
+      const approvedMessage=verifyNexaWalletChallenge(challenge,{
+        walletAddress:current.address,
+        market,
+        brDomain:import.meta.env.VITE_WALLET_CONNECT_BR_TRUSTED_DOMAIN,
+        globalDomain:import.meta.env.VITE_WALLET_CONNECT_GLOBAL_TRUSTED_DOMAIN,
+      });
       const signature=await provider.request({method:'personal_sign',
-        params:[hexMessage(challenge.message),current.address]});
+        params:[hexMessage(approvedMessage),current.address]});
       if(typeof signature!=='string'||!/^0x[0-9a-fA-F]{130}$/.test(signature))
         throw Error('A carteira não devolveu uma assinatura EOA válida.');
       const verified=await labApi('/wallet-connect-inbound/ownership/verify',accessToken,{
