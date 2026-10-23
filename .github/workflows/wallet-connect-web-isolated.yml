@@ -1,0 +1,46 @@
+name: Nexa Wallet Connect isolated web checks
+on:
+  push:
+    branches:
+      - feat/nexa-walletconnect-br-global-isolated
+    paths:
+      - 'src/ExternalWalletConnect.jsx'
+      - 'src/App.jsx'
+      - 'src/styles.css'
+      - 'scripts/validate-wallet-connect-isolated.mjs'
+      - '.github/workflows/wallet-connect-web-isolated.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: wallet-connect-web-isolated-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  compile-and-validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      VITE_API_URL: https://nexa-backend-p2u0.onrender.com/api/v1
+      VITE_PRIVY_APP_ID: cmpen2gm3007v0cjswjlyefji
+      VITE_PRIVY_CLIENT_ID: client-web-ci-placeholder
+      VITE_WALLET_CONNECT_LAB_ENABLED: 'true'
+      VITE_WALLET_CONNECT_LAB_API_URL: https://wallet-lab.example.test/api/v1
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-node@v4
+        with: {node-version: '20.20.2'}
+      - name: Install exact app dependency versions
+        run: npm install --no-audit --no-fund
+      - name: Verify existing wallet and redemption contract
+        run: npm run validate:contract
+      - name: Reject unsafe or missing Wallet Connect flows
+        run: node scripts/validate-wallet-connect-isolated.mjs
+      - name: Build isolated website
+        run: npm run build
+      - name: Verify compiled app
+        run: |
+          test -s dist/index.html
+          test -d dist/assets
+          ! grep -R -E 'PRIVY_APP_SECRET|PRIVY_SECRET_KEY|seedPhrase' dist
+          grep -R -q 'HOMOLOGAÇÃO ISOLADA' dist/assets
