@@ -1,96 +1,99 @@
-# Nexa Wallet Connect — QA separado de produção
+# Nexa Wallet Connect — Homologação QA Brasil + Global
 
-## O que esta branch entrega
+## Estado em 23/10/2026
 
-Branch `feat/nexa-walletconnect-br-global-isolated` do portal React Nexa.
-A interface permite abrir o seletor Privy para carteiras externas, escolher
-a carteira, alternar entre os mercados **BR** e **GLOBAL**, solicitar um
-desafio com validade de cinco minutos, assinar localmente com `personal_sign`,
-confirmar o vínculo da carteira EOA e listar ou remover o vínculo.
+**URL do teste:** https://nexa-walletconnect-qa-web.onrender.com
 
-**Não é uma integração de liquidação.** Não transmite transações, não solicita
-aprovações ERC-20, não credita o ledger e não acessa as chaves privadas.
-A taxa Nexa para entrada futura de USDC nativo Polygon continua **0%**.
+**API separada:** https://nexa-walletconnect-qa-api.onrender.com/health
 
-## Pré-condições para um teste ponta a ponta verdadeiro
+Frontend: `HenriqueGuilhermeUx/nexa-react-app`, branch
+`feat/nexa-walletconnect-br-global-isolated`.
 
-1. Criar ou usar um serviço **Nest de homologação separado** do serviço financeiro
-   `nexa-backend-p2u0.onrender.com`, com banco e JWT isolados, schema SQL
-   `docs/sql/review_only_external_wallet_binding.sql` revisto/instalado
-   e o módulo `ExternalWalletInboundLabModule` importado somente nesse Nest.
-   O serviço `nexa-wallet-inbound-readonly-lab` atual **não** atende essas rotas;
-   ele responde somente a `GET /health`. Nunca reutilizar credenciais
-   de clientes ou banco de produção nesse ambiente.
-2. Servir um build desta branch num domínio **QA separado e protegido**.
-   Configurar o App Client Web no Privy para autorizar exatamente a origem
-   HTTPS desse QA e habilitar os conectores EVM externos/WalletConnect
-   disponíveis na aplicação de teste. O seletor QR depende da configuração
-   do provedor, não apenas de renderizar um botão.
-3. Usar a aplicação Privy de homologação e sua chave pública App ID no QA.
-   Nunca colocar App Secret, seed phrase ou credenciais na build web.
-4. Testar com um usuário **de homologação** que exista tanto no login Nexa
-   staging quanto no login Privy staging com o **mesmo e-mail**.
+Backend: `HenriqueGuilhermeUx/nexa-backend1`, branch
+`feat/nexa-walletconnect-qa-api-v1`, startup **standalone**
+`node scripts/wallet-connect-qa-api.cjs`. **Não** importa
+`AppModule`, tesouraria, Auth de clientes ou serviços de execução financeira.
+Não confundir com as rotas NestJS ainda não registradas no backend de produção.
 
-## Variáveis do frontend QA (não usar produção)
+Dados de QA: branch `br-soft-mode-b442ar6x` do Neon
+`bold-breeze-67797797`, schema `nexa_wc_qa`, sem dados financeiros.
+O teste automático com EOAs efêmeras passou (autenticação, replay, assinatura
+incorreta, vinculação, listagem, revogação). Na sequência, foi desativada a
+execução automática desse teste em cada restart.
 
-```env
-VITE_API_URL=https://SEU-BACKEND-STAGING.example/api/v1
-VITE_PRIVY_APP_ID=APP_ID_PUBLICO_PRIVY_STAGING
-VITE_PRIVY_CLIENT_ID=CLIENT_ID_WEB_STAGING
-VITE_WALLET_CONNECT_LAB_ENABLED=true
-VITE_WALLET_CONNECT_LAB_API_URL=https://SEU-BACKEND-STAGING.example/api/v1
-VITE_WALLET_CONNECT_BR_TRUSTED_DOMAIN=qa-br.example.test
-VITE_WALLET_CONNECT_GLOBAL_TRUSTED_DOMAIN=qa-global.example.test
-```
+## Como testar o conector no navegador
 
-Sem `VITE_WALLET_CONNECT_LAB_ENABLED=true`, a seção não aparece.
-Sem a API staging válida ou se a URL for o backend financeiro de produção,
-o vínculo é bloqueado antes de enviar o JWT da sessão.
+1. Abra o link QA acima em HTTPS no computador com MetaMask, Rabby,
+   Coinbase Wallet Extension ou outra carteira EVM instalada; alternativamente,
+   abra no navegador interno de uma carteira que injete `window.ethereum`.
+2. Escolha **Brasil** ou **Global**. Ambos são contextos QA no mesmo backend
+   isolado, **não são contas reais Nexa**.
+3. No seletor, escolha a carteira detectada via **EIP-6963** ou `window.ethereum`.
+   Clique **Conectar carteira**, autorize a leitura do endereço selecionado,
+   e confirme a rede Polygon (chain ID 137) se solicitado.
+4. Clique **Assinar mensagem e entrar no QA**. Leia a mensagem antes de
+   assinar; ela deve citar `nexa-walletconnect-qa-web.onrender.com`,
+   o endereço selecionado e explicitar que nenhuma transferência é autorizada.
+   Uma sessão de teste temporária será criada no backend QA.
+5. Para **vincular outra carteira**, escolha-a no seletor, conecte e clique
+   **Assinar e vincular**. A API verifica assinatura EOA, desafio de uso único,
+   endereço, chain ID, proprietário e conta QA. A lista será atualizada.
+6. Use **Desvincular** para revogar o vínculo e confirmar que ele desapareceu
+   da lista, sem movimentação financeira.
 
-## Contratos HTTP esperados no ambiente staging
+## Limites e proibições desta fase
 
-Todos com `Authorization: Bearer <JWT de usuário Nexa staging>`:
+- **Não envie USDC** ou qualquer criptoativo para testar o vínculo.
+- A taxa Nexa prevista para entrada de USDC na Polygon é **0%**,
+  mas o recebimento e o crédito de clientes **não estão ativados**.
+- O browser QA atual **não depende da aplicação Privy de produção**
+  e não carrega sua sessão financeira. IDs Privy de produção são
+  inutilizados nas variáveis desse deploy.
+- **WalletConnect por QR/rede móvel não é oferecido** neste modo EIP-6963.
+  Exige configuração e aprovação separadas de um projeto WalletConnect/Reown
+  ou um App Client Privy **de testes**.
+- Este fluxo cobre carteiras **EOA** compatíveis com assinatura pessoal.
+  Contratos EIP-1271, multisig e smart accounts precisam de fluxo próprio.
+- Testes de navegador com carteiras reais são necessários antes de dizer
+  que MetaMask, Rabby e extensões específicas passaram manualmente.
+- Não foi feito merge em main, deploy de produção ou alteração da PR #172.
+- Nenhuma assinatura libera `eth_sendTransaction`, `approve`, Pix,
+  swaps, saques ou autorização automática de movimentação.
 
-- `POST /api/v1/wallet-connect-inbound/ownership/challenge`
-  com `{walletAddress,market:"BR"|"GLOBAL"}`;
-  resposta `{challengeId,message,expiresAt,chainId:137}`
-- `POST /api/v1/wallet-connect-inbound/ownership/verify`
-  com `{challengeId,signature,market}`;
-  resposta `{bound:true,chainId:137,address}`
-- `GET /api/v1/wallet-connect-inbound/ownership/links`
-  com resposta `{wallets:[...]}`
-- `DELETE /api/v1/wallet-connect-inbound/ownership/link`
-  com body `{walletAddress}` e resposta `{revoked:true,...}`
+## Controles técnicos
 
-A assinatura inclui domínio/origem e nonce criados pelo servidor, nunca uma
-mensagem de autorização financeira. A API deve aplicar autenticação, rate
-limit, uso único, expiração do desafio e isolamento entre usuários/mercados.
+A build QA usa `VITE_WALLET_CONNECT_LAB_ENABLED=true` e
+`VITE_WALLET_CONNECT_QA_INJECTED=true`, desviando **antes** da montagem do
+`PrivyProvider` e exibindo `QaInjectedWalletApp`.
 
-## Checklist final para liberar BR e GLOBAL
+O cliente fixa a única API autorizada em
+`https://nexa-walletconnect-qa-api.onrender.com/api/v1`.
+O frontend verifica o desafio canônico de login/vínculo antes de solicitar
+`personal_sign`, revalida a conta ativa e a rede após a assinatura e mantém
+o bearer JWT QA somente em memória (não em localStorage).
 
-- Usuário staging autenticado e e-mail Privy correspondente
-- MetaMask/Rabby conectando via extensão
-- Coinbase/Trust via conector oferecido pelo Privy no dispositivo ou QR
-- Assinatura válida aceita pelo Nest staging, rejeitando replay e outros usuários
-- Carteiras listadas somente para usuário titular e desvinculadas corretamente
-- Redes incorretas, contas diferentes, sessão expirada e rejeição de assinatura
-  apresentam erros sem alterar ledger
-- Recebimento USDC nativo Polygon com `0%` taxa Nexa homologado **separadamente**,
-  e prova real de depósito autorizada à wallet isolada; mínimo de 20 confirmações
-- Aprovação explícita posterior antes de qualquer ativação da produção
+O backend exige:
+- `NEXA_WALLET_CONNECT_QA_ONLY=ISOLATED_EOA_NONFINANCIAL_QA`
+- `NODE_ENV=walletconnect_qa`
+- `NEXA_FINANCIAL_EXECUTION_ENABLED=false`
+- `DIRECT_SETTLEMENT_ENABLED=false`
+- Origem HTTPS QA explicitamente permitida e base Neon isolada
+- Desafio EIP-191/SIWE restrito ao host de homologação, nonce e expiração 5min
+- Consumo transacional de uso único e vínculo único por endereço
+- Sem credenciais de carteiras reais e sem leituras/escritas de ledger
 
-## Comandos
+## Testes
 
 ```bash
+node scripts/wallet-connect-challenge.test.mjs
+node scripts/wallet-connect-injected.test.mjs
 node scripts/validate-wallet-connect-isolated.mjs
-npm run validate:contract
-npm run build
+npm run check
 ```
 
-A workflow `wallet-connect-web-isolated.yml` executa esses checks na branch.
-A publicação desta branch **não** foi feita no site/app dos clientes.
+Workflow: `.github/workflows/wallet-connect-web-isolated.yml`.
 
-**Assinatura anti-phishing:** a mensagem do desafio deve usar exatamente o domínio
-BR ou Global configurado no frontend e pelo backend, com a URI `https://dominio/`,
-nonce de 32 bytes, rede 137 e validade máxima de 5 minutos. A interface
-rejeita qualquer variação antes de abrir o pedido de assinatura.
+**Não confundir** esse QA utilizável para vínculo com a liberação
+do Wallet Connect para clientes Nexa Brasil/Global: ainda são necessários
+homologação com extensões reais, observação de depósito na Privy TEST,
+reconciliação e aprovação operacional antes de qualquer ativação financeira.
