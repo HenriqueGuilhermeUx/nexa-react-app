@@ -53,7 +53,7 @@ async function labApi(path,token,options={}){
  * external wallets (including WalletConnect where enabled in Privy).
  * Linking uses one-time server-issued challenges; no transaction broadcast.
  */
-export default function ExternalWalletConnect({accessToken,nexaEmail}){
+export default function ExternalWalletConnect({accessToken,nexaEmail,qaIdentityVerified=false}){
   const {ready,authenticated,user,login}=usePrivy();
   const {wallets,ready:walletsReady}=useWallets();
   const {connectWallet}=useConnectWallet();
@@ -64,7 +64,7 @@ export default function ExternalWalletConnect({accessToken,nexaEmail}){
   const [error,setError]=useState('');
   const [info,setInfo]=useState('');
   const candidates=useMemo(()=>externalWallets(wallets),[wallets]);
-  const emailMatch=Boolean(authenticated&&getUserEmail(user)&&nexaEmail&&
+  const emailMatch=qaIdentityVerified===true||Boolean(authenticated&&getUserEmail(user)&&nexaEmail&&
     getUserEmail(user)===String(nexaEmail).toLowerCase());
   const current=candidates.find(w=>w.address.toLowerCase()===selected.toLowerCase())||null;
 
@@ -91,7 +91,7 @@ export default function ExternalWalletConnect({accessToken,nexaEmail}){
     setError('');setInfo('');setState('connecting');
     try{
       if(!ready)throw Error('A autenticação Privy ainda está carregando.');
-      if(!authenticated){login();setInfo('Confirme o mesmo e-mail da sua conta Nexa antes de continuar.');return;}
+      if(!authenticated&&!qaIdentityVerified){login();setInfo('Confirme o mesmo e-mail da sua conta Nexa antes de continuar.');return;}
       if(!emailMatch)throw Error('O e-mail Privy é diferente do e-mail da sua conta Nexa.');
       connectWallet();
       setInfo('Escolha sua carteira no Privy. Ao conectar, selecione o endereço para comprovar o vínculo.');
@@ -182,7 +182,7 @@ export default function ExternalWalletConnect({accessToken,nexaEmail}){
       </select>
     </label>
     {!ready?<p className="muted">Carregando Privy…</p>:
-      !authenticated?<p className="notice notice-info">Entre na sua conta Privy usando o mesmo e-mail da Nexa.</p>:
+      !authenticated&&!qaIdentityVerified?<p className="notice notice-info">Entre na sua conta Privy usando o mesmo e-mail da Nexa.</p>:
       !emailMatch?<p className="notice notice-warning">E-mail Privy diferente da conta Nexa. Nenhum vínculo será autorizado.</p>:null}
     <div className="external-wallet-actions">
       <button className="secondary-button" type="button" onClick={connect}
