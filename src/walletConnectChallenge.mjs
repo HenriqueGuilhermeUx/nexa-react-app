@@ -6,7 +6,7 @@ const ISO=/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/;
  * for an EIP-191 personal signature. Prevent arbitrary-message phishing.
  * The server must still verify/replay-protect and bind the actual signer.
  */
-export function verifyNexaWalletChallenge(input,{walletAddress,market,brDomain,globalDomain,now=Date.now()}){
+export function verifyNexaWalletChallenge(input,{walletAddress,market,brDomain,globalDomain,purpose='link',now=Date.now()}){
   const domain=market==='BR'?brDomain:market==='GLOBAL'?globalDomain:'';
   if(!domain||!ADDR.test(walletAddress||'')||!Number.isFinite(now)||
      !/^[a-z0-9.-]+$/i.test(domain)||domain.startsWith('.')||
@@ -15,10 +15,14 @@ export function verifyNexaWalletChallenge(input,{walletAddress,market,brDomain,g
      input.chainId!==137||!ISO.test(input.expiresAt||'')||
      typeof input.message!=='string'||input.message.length>4000)
     throw Error('INVALID_WALLET_CHALLENGE');
+  if(purpose!=='login'&&purpose!=='link')throw Error('UNKNOWN_WALLET_CHALLENGE_PURPOSE');
+  const action=purpose==='login'
+    ?'Sign in to the Nexa Wallet Connect QA lab. No transfer is authorized.'
+    :'Link this external wallet to your Nexa account. No transfer is authorized.';
   const lines=input.message.split('\n');
   if(lines.length!==11||!lines[0].endsWith(' wants you to sign in with your Ethereum account:')||
      !ADDR.test(lines[1])||lines[1].toLowerCase()!==walletAddress.toLowerCase()||
-     lines[2]!==''||lines[3]!=='Link this external wallet to your Nexa account. No transfer is authorized.'||
+     lines[2]!==''||lines[3]!==action||
      lines[4]!==''||lines[5]!=='URI: https://'+domain+'/'||
      lines[6]!=='Version: 1'||lines[7]!=='Chain ID: 137')
     throw Error('INVALID_WALLET_CHALLENGE');
