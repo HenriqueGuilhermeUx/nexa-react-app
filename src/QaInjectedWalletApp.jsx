@@ -33,6 +33,9 @@ export default function QaInjectedWalletApp(){
   const clearWallet=useCallback(()=>{
     clearSession();setConnected(null);setNotice('');
   },[clearSession]);
+  const rootProvider=useMemo(()=>session?.rootKey
+    ?providers.find(x=>x.key===session.rootKey)||null:null,
+    [providers,session?.rootKey]);
 
   useEffect(()=>{
     if(!QA_ENABLED)return;
@@ -61,22 +64,46 @@ export default function QaInjectedWalletApp(){
     return ()=>window.removeEventListener('eip6963:announceProvider',announce);
   },[]);
 
+  // A QA login remains valid while the user selects and connects another
+  // EOA. Changing the logged-in ROOT account is different: it ends the session.
   useEffect(()=>{
     if(!chosen?.provider||!connected||chosen.key!==connected.key)return;
     const provider=chosen.provider;
     if(typeof provider.on!=='function')return;
-    const changed=()=>clearWallet();
-    provider.on('accountsChanged',changed);
-    provider.on('disconnect',changed);
-    provider.on('chainChanged',changed);
+    const accountChanged=()=>{
+      setConnected(null);
+      if(session?.rootKey===chosen.key)clearSession();
+    };
+    const chainChanged=()=>setConnected(null);
+    provider.on('accountsChanged',accountChanged);
+    provider.on('disconnect',accountChanged);
+    provider.on('chainChanged',chainChanged);
     return ()=>{
       if(typeof provider.removeListener==='function'){
-        provider.removeListener('accountsChanged',changed);
-        provider.removeListener('disconnect',changed);
-        provider.removeListener('chainChanged',changed);
+        provider.removeListener('accountsChanged',accountChanged);
+        provider.removeListener('disconnect',accountChanged);
+        provider.removeListener('chainChanged',chainChanged);
       }
     };
-  },[chosen,connected,clearWallet]);
+  },[chosen,connected,session?.rootKey,clearSession]);
+
+  // Continue watching the authenticated root EOA even when another wallet
+  // provider is selected for linking. Revoke the in-memory session on root
+  // account changes/disconnects, not on unrelated provider chain switches.
+  useEffect(()=>{
+    if(!rootProvider?.provider||rootProvider.key===chosen?.key)return;
+    const provider=rootProvider.provider;
+    if(typeof provider.on!=='function')return;
+    const invalidate=()=>clearSession();
+    provider.on('accountsChanged',invalidate);
+    provider.on('disconnect',invalidate);
+    return ()=>{
+      if(typeof provider.removeListener==='function'){
+        provider.removeListener('accountsChanged',invalidate);
+        provider.removeListener('disconnect',invalidate);
+      }
+    };
+  },[rootProvider,chosen?.key,clearSession]);
 
   useEffect(()=>{
     if(!sessionValid){setLinks([]);return;}
@@ -103,10 +130,13 @@ export default function QaInjectedWalletApp(){
       if(!chosen)throw Error('Instale e selecione uma carteira compatível no navegador.');
       const address=await activeAccount(chosen.provider,{requestConnection:true});
       await requirePolygon(chosen.provider);
-      // Do not conflate the provider account with an existing Nexa wallet.
-      clearSession();
+      // Preserve the existing signed QA identity when the user connects a
+      // SECOND wallet. Never replace the root account with the link target.
+      if(!sessionValid&&session)clearSession();
       setConnected({key:chosen.key,address});
-      setNotice('Carteira conectada. A assinatura de entrada não movimenta ativos.');
+      setNotice(sessionValid
+        ?'Carteira pronta para vínculo na sessão QA existente. Nenhum ativo foi movimentado.'
+        :'Carteira conectada. A assinatura de entrada não movimenta ativos.');
     });
   }
   function checkedWallet(){
@@ -114,6 +144,7 @@ export default function QaInjectedWalletApp(){
     return {wallet:chosen,address:verifiedAddress(connected.address)};
   }
   async function sign(purpose){
+    if(purpose==='link'&&!sessionValid)throw Error('Sessão QA inválida ou expirada.');
     const {wallet,address}=checkedWallet();
     await activeAccount(wallet.provider,{expectedAddress:address});
     await requirePolygon(wallet.provider);
@@ -139,7 +170,8 @@ export default function QaInjectedWalletApp(){
          typeof result.accessToken!=='string'||result.accessToken.length<30||
          !Number.isInteger(result.expiresInSeconds)||result.expiresInSeconds>1800)
         throw Error('A API não confirmou o isolamento financeiro da sessão.');
-      setSession({token:result.accessToken,root:proof.address,expiresAt:Date.now()+result.expiresInSeconds*1000});
+      setSession({token:result.accessToken,root:proof.address,rootKey:chosen.key,
+        expiresAt:Date.now()+result.expiresInSeconds*1000});
       setNotice('Assinatura validada. Sessão QA autorizada por 30 minutos.');
     });
   }
