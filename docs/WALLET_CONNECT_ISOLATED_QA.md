@@ -39,6 +39,8 @@ VITE_PRIVY_APP_ID=APP_ID_PUBLICO_PRIVY_STAGING
 VITE_PRIVY_CLIENT_ID=CLIENT_ID_WEB_STAGING
 VITE_WALLET_CONNECT_LAB_ENABLED=true
 VITE_WALLET_CONNECT_LAB_API_URL=https://SEU-BACKEND-STAGING.example/api/v1
+VITE_WALLET_CONNECT_BR_TRUSTED_DOMAIN=qa-br.example.test
+VITE_WALLET_CONNECT_GLOBAL_TRUSTED_DOMAIN=qa-global.example.test
 ```
 
 Sem `VITE_WALLET_CONNECT_LAB_ENABLED=true`, a seção não aparece.
@@ -87,3 +89,8 @@ npm run build
 
 A workflow `wallet-connect-web-isolated.yml` executa esses checks na branch.
 A publicação desta branch **não** foi feita no site/app dos clientes.
+
+**Assinatura anti-phishing:** a mensagem do desafio deve usar exatamente o domínio
+BR ou Global configurado no frontend e pelo backend, com a URI `https://dominio/`,
+nonce de 32 bytes, rede 137 e validade máxima de 5 minutos. A interface
+rejeita qualquer variação antes de abrir o pedido de assinatura.
