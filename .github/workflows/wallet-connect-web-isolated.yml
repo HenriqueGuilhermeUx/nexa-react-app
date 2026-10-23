@@ -5,6 +5,10 @@ on:
       - feat/nexa-walletconnect-br-global-isolated
     paths:
       - 'src/ExternalWalletConnect.jsx'
+      - 'src/QaInjectedWalletApp.jsx'
+      - 'src/walletConnectInjected.mjs'
+      - 'src/main.jsx'
+      - 'scripts/wallet-connect-injected.test.mjs'
       - 'src/walletConnectChallenge.mjs'
       - 'scripts/wallet-connect-challenge.test.mjs'
       - 'src/App.jsx'
@@ -23,9 +27,12 @@ jobs:
     timeout-minutes: 15
     env:
       VITE_API_URL: https://nexa-backend-p2u0.onrender.com/api/v1
-      VITE_PRIVY_APP_ID: cmpen2gm3007v0cjswjlyefji
+      VITE_PRIVY_APP_ID: qa-injected-does-not-use-privy
       VITE_PRIVY_CLIENT_ID: client-web-ci-placeholder
       VITE_WALLET_CONNECT_LAB_ENABLED: 'true'
+      VITE_WALLET_CONNECT_QA_INJECTED: 'true'
+      VITE_WALLET_CONNECT_BR_TRUSTED_DOMAIN: nexa-walletconnect-qa-web.onrender.com
+      VITE_WALLET_CONNECT_GLOBAL_TRUSTED_DOMAIN: nexa-walletconnect-qa-web.onrender.com
       VITE_WALLET_CONNECT_LAB_API_URL: https://wallet-lab.example.test/api/v1
     steps:
       - uses: actions/checkout@v4
@@ -39,6 +46,7 @@ jobs:
       - name: Reject unsafe or missing Wallet Connect flows
         run: |
           node scripts/wallet-connect-challenge.test.mjs
+          node scripts/wallet-connect-injected.test.mjs
           node scripts/validate-wallet-connect-isolated.mjs
       - name: Build isolated website
         run: npm run build
@@ -47,4 +55,4 @@ jobs:
           test -s dist/index.html
           test -d dist/assets
           ! grep -R -E 'PRIVY_APP_SECRET|PRIVY_SECRET_KEY|seedPhrase' dist
-          grep -R -q 'HOMOLOGAÇÃO ISOLADA' dist/assets
+          grep -R -q 'LABORATÓRIO NÃO FINANCEIRO' dist/assets
