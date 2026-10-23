@@ -1,4 +1,5 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import ExternalWalletConnect from './ExternalWalletConnect.jsx';
 import {
   useCreateWallet,
   useLoginWithEmail,
@@ -518,6 +519,11 @@ function Dashboard({session, user, profile, history, onRefresh, onLogout}) {
             contábil e operacional ser concluída.
           </div>
         )}
+
+        <ExternalWalletConnect
+          accessToken={session?.accessToken}
+          nexaEmail={user?.email || session?.user?.email}
+        />
 
         <section className="content-grid">
           <article className="content-card">
