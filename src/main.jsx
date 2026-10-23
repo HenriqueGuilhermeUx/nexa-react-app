@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import {PrivyProvider} from '@privy-io/react-auth';
 import App from './App.jsx';
 import QaWalletConnectApp from './QaWalletConnectApp.jsx';
+import QaInjectedWalletApp from './QaInjectedWalletApp.jsx';
 import RedemptionPortal from './RedemptionPortal.jsx';
 import './styles.css';
 
@@ -30,14 +31,21 @@ const providerProps = {
   },
 };
 
+// In injected-wallet QA mode, never start Privy or use a production Privy app.
+const injectedQa = import.meta.env.VITE_WALLET_CONNECT_LAB_ENABLED === 'true' &&
+  import.meta.env.VITE_WALLET_CONNECT_QA_INJECTED === 'true';
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <PrivyProvider {...providerProps}>
-      {import.meta.env.VITE_WALLET_CONNECT_LAB_ENABLED === 'true' ? (
-        <QaWalletConnectApp />
-      ) : (
-        <><App /><RedemptionPortal /></>
-      )}
-    </PrivyProvider>
+    {injectedQa ? (
+      <QaInjectedWalletApp />
+    ) : (
+      <PrivyProvider {...providerProps}>
+        {import.meta.env.VITE_WALLET_CONNECT_LAB_ENABLED === 'true' ? (
+          <QaWalletConnectApp />
+        ) : (
+          <><App /><RedemptionPortal /></>
+        )}
+      </PrivyProvider>
+    )}
   </React.StrictMode>,
 );
