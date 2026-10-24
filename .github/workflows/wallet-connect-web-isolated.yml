@@ -10,6 +10,7 @@ on:
       - 'src/qa-main.jsx'
       - 'vite.walletconnect-qa.config.js'
       - 'scripts/build-walletconnect-qa.mjs'
+      - 'scripts/run-checked-build.mjs'
       - 'package.json'
       - 'src/walletConnectInjected.mjs'
       - 'src/main.jsx'
@@ -54,7 +55,7 @@ jobs:
           node scripts/wallet-connect-injected.test.mjs
           node scripts/validate-wallet-connect-isolated.mjs
       - name: Build minimal QA portal with no production wallet assets
-        run: npm run build:walletconnect:qa
+        run: npm run check
       - name: Verify compiled app
         run: |
           test -s dist/index.html
