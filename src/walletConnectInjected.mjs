@@ -13,6 +13,16 @@ export function requireQaUrl(candidate){
     throw Error('Somente a API de homologação isolada está autorizada.');
   return url.origin+url.pathname;
 }
+// The authenticated QA identity is independent of the next wallet being
+// linked. Swapping selected providers must not silently revoke its session.
+export function nextQaConnectionState(session,key,address,now=Date.now()){
+  if(typeof key!=='string'||!key||!Number.isFinite(now))
+    throw Error('Invalid wallet connection transition.');
+  const connected={key,address:verifiedAddress(address)};
+  const retainedSession=session&&typeof session.token==='string'&&
+    session.expiresAt>now?session:null;
+  return {session:retainedSession,connected};
+}
 export function verifiedAddress(value){
   if(typeof value!=='string'||!ADDRESS.test(value))throw Error('Endereço EVM inválido.');
   return value.toLowerCase();
