@@ -11,7 +11,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "validate:contract": "node scripts/validate-privy-web.mjs",
-    "check": "npm run validate:contract && npm run build",
+    "check": "node scripts/run-checked-build.mjs",
     "build:walletconnect:qa": "node scripts/build-walletconnect-qa.mjs"
   },
   "dependencies": {
