@@ -11,7 +11,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "validate:contract": "node scripts/validate-privy-web.mjs",
-    "check": "npm run validate:contract && npm run build"
+    "check": "npm run validate:contract && npm run build",
+    "build:walletconnect:qa": "node scripts/build-walletconnect-qa.mjs"
   },
   "dependencies": {
     "@privy-io/react-auth": "3.35.2",
