@@ -6,6 +6,11 @@ on:
     paths:
       - 'src/ExternalWalletConnect.jsx'
       - 'src/QaInjectedWalletApp.jsx'
+      - 'qa-entry.html'
+      - 'src/qa-main.jsx'
+      - 'vite.walletconnect-qa.config.js'
+      - 'scripts/build-walletconnect-qa.mjs'
+      - 'package.json'
       - 'src/walletConnectInjected.mjs'
       - 'src/main.jsx'
       - 'scripts/wallet-connect-injected.test.mjs'
@@ -26,14 +31,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      VITE_API_URL: https://nexa-backend-p2u0.onrender.com/api/v1
+      VITE_API_URL: https://nexa-walletconnect-qa-api.onrender.com/api/v1
       VITE_PRIVY_APP_ID: qa-injected-does-not-use-privy
       VITE_PRIVY_CLIENT_ID: client-web-ci-placeholder
       VITE_WALLET_CONNECT_LAB_ENABLED: 'true'
       VITE_WALLET_CONNECT_QA_INJECTED: 'true'
       VITE_WALLET_CONNECT_BR_TRUSTED_DOMAIN: nexa-walletconnect-qa-web.onrender.com
       VITE_WALLET_CONNECT_GLOBAL_TRUSTED_DOMAIN: nexa-walletconnect-qa-web.onrender.com
-      VITE_WALLET_CONNECT_LAB_API_URL: https://wallet-lab.example.test/api/v1
+      VITE_WALLET_CONNECT_LAB_API_URL: https://nexa-walletconnect-qa-api.onrender.com/api/v1
     steps:
       - uses: actions/checkout@v4
         with: {persist-credentials: false}
@@ -48,11 +53,14 @@ jobs:
           node scripts/wallet-connect-challenge.test.mjs
           node scripts/wallet-connect-injected.test.mjs
           node scripts/validate-wallet-connect-isolated.mjs
-      - name: Build isolated website
-        run: npm run build
+      - name: Build minimal QA portal with no production wallet assets
+        run: npm run build:walletconnect:qa
       - name: Verify compiled app
         run: |
           test -s dist/index.html
           test -d dist/assets
           ! grep -R -E 'PRIVY_APP_SECRET|PRIVY_SECRET_KEY|seedPhrase' dist
           grep -R -q 'LABORATÓRIO NÃO FINANCEIRO' dist/assets
+          grep -q 'Homologação isolada' dist/index.html
+          test ! -f dist/qa-entry.html
+          ! grep -R -E 'cmpen2gm3007v0cjswjlyefji|nexa-backend-p2u0.onrender.com|eth_sendTransaction|wallet_sendCalls|wallet_requestPermissions' dist/assets
