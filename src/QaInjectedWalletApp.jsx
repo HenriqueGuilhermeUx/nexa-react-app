@@ -1,6 +1,6 @@
 import {useCallback,useEffect,useMemo,useState} from 'react';
 import {
-  activeAccount,challengeOptions,qaRequest,requirePolygon,
+  activeAccount,challengeOptions,nextQaConnectionState,qaRequest,requirePolygon,
   requireQaUrl,signCanonicalQaChallenge,verifiedAddress,walletLabel,
 } from './walletConnectInjected.mjs';
 
@@ -130,11 +130,12 @@ export default function QaInjectedWalletApp(){
       if(!chosen)throw Error('Instale e selecione uma carteira compatível no navegador.');
       const address=await activeAccount(chosen.provider,{requestConnection:true});
       await requirePolygon(chosen.provider);
-      // Preserve the existing signed QA identity when the user connects a
-      // SECOND wallet. Never replace the root account with the link target.
-      if(!sessionValid&&session)clearSession();
-      setConnected({key:chosen.key,address});
-      setNotice(sessionValid
+      // The active QA identity is the previously signed ROOT, not whichever
+      // address this wallet exposes. Keep the session for a second wallet.
+      const transition=nextQaConnectionState(session,chosen.key,address);
+      if(!transition.session&&session)clearSession();
+      setConnected(transition.connected);
+      setNotice(transition.session
         ?'Carteira pronta para vínculo na sessão QA existente. Nenhum ativo foi movimentado.'
         :'Carteira conectada. A assinatura de entrada não movimenta ativos.');
     });
