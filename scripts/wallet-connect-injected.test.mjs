@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {
   requireQaUrl,verifiedAddress,walletLabel,activeAccount,requirePolygon,
+  nextQaConnectionState,
   signCanonicalQaChallenge,
 } from '../src/walletConnectInjected.mjs';
 
@@ -18,6 +19,16 @@ for(const bad of [
  assert.throws(()=>requireQaUrl(bad));
 }
 assert.equal(verifiedAddress('0x'+'A'.repeat(40)),'0x'+'a'.repeat(40));
+const rootSession={token:'qa-signed-root-session',root:'0x'+'1'.repeat(40),rootKey:'first-provider',expiresAt:200000};
+const switched=nextQaConnectionState(rootSession,'second-provider','0x'+'2'.repeat(40),100000);
+assert.equal(switched.session,rootSession,'second wallet must not clear QA login');
+assert.equal(switched.connected.key,'second-provider');
+assert.equal(switched.connected.address,'0x'+'2'.repeat(40));
+const expired=nextQaConnectionState(rootSession,'second-provider','0x'+'2'.repeat(40),200000);
+assert.equal(expired.session,null,'expired session must not be revived');
+assert.throws(()=>nextQaConnectionState(rootSession,'','0x'+'2'.repeat(40),100000));
+assert.throws(()=>nextQaConnectionState(rootSession,'second-provider','not-a-wallet',100000));
+
 assert.throws(()=>verifiedAddress('0x123'));
 assert.ok(!walletLabel('<img src=x onerror=1>').includes('<'));
 const address='0x'+'2'.repeat(40);
