@@ -91,7 +91,7 @@ export default function ExternalWalletConnect({accessToken,nexaEmail,qaIdentityV
     setError('');setInfo('');setState('connecting');
     try{
       if(!ready)throw Error('A autenticação Privy ainda está carregando.');
-      if(!authenticated&&!qaIdentityVerified){login();setInfo('Confirme o mesmo e-mail da sua conta Nexa antes de continuar.');return;}
+      if(!authenticated){login();setInfo('Confirme o mesmo e-mail da sua conta Nexa antes de continuar.');return;}
       if(!emailMatch)throw Error('O e-mail Privy é diferente do e-mail da sua conta Nexa.');
       connectWallet();
       setInfo('Escolha sua carteira no Privy. Ao conectar, selecione o endereço para comprovar o vínculo.');
