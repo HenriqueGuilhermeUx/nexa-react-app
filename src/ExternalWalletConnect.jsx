@@ -103,6 +103,7 @@ export default function ExternalWalletConnect({accessToken,nexaEmail,qaIdentityV
     setError('');setInfo('');setState('signing');
     try{
       assertLabApi();
+      if(!accessToken||typeof accessToken!=='string')throw Error('Entre na Nexa novamente antes de vincular a carteira.');
       if(!emailMatch)throw Error('Valide o mesmo e-mail Nexa no Privy antes de assinar.');
       if(!current||!ADDRESS.test(current.address))throw Error('Escolha uma carteira externa válida.');
       const provider=typeof current.getEthereumProvider==='function'
@@ -200,7 +201,7 @@ export default function ExternalWalletConnect({accessToken,nexaEmail,qaIdentityV
     </label>}
     {current&&<div className="external-wallet-actions">
       <span className="muted">{short(current.address)} · Polygon</span>
-      <button className="primary-button" type="button" disabled={state!=='idle'||!emailMatch}
+      <button className="primary-button" type="button" disabled={state!=='idle'||!emailMatch||!accessToken}
         onClick={link}>{state==='signing'?'Confirmando…':'Assinar e vincular'}</button>
     </div>}
     {links.length>0&&<div className="external-wallet-linked">
