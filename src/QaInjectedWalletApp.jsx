@@ -227,6 +227,7 @@ export default function QaInjectedWalletApp(){
       </section>
       <section className="content-card external-wallet-lab">
         <h2>1. Conectar uma carteira</h2>
+        <p className="muted">Como funciona: escolha Brasil ou Global, selecione sua carteira, clique em Conectar, assine a mensagem de entrada e assine novamente para vinculá-la. Essas assinaturas não autorizam envio de USDC, Pix nem taxas.</p>
         <p className="muted">MetaMask, Rabby e extensões compatíveis com EIP-6963.
           No celular, abra esta página no navegador interno da carteira. Conexão por QR WalletConnect ainda não está habilitada.</p>
         <label className="external-wallet-field">Mercado
