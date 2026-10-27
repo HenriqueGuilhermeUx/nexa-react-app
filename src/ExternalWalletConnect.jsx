@@ -64,7 +64,7 @@ export default function ExternalWalletConnect({accessToken,nexaEmail,qaIdentityV
   const [error,setError]=useState('');
   const [info,setInfo]=useState('');
   const candidates=useMemo(()=>externalWallets(wallets),[wallets]);
-  const emailMatch=qaIdentityVerified===true||Boolean(authenticated&&getUserEmail(user)&&nexaEmail&&
+  const emailMatch=Boolean(authenticated&&getUserEmail(user)&&nexaEmail&&
     getUserEmail(user)===String(nexaEmail).toLowerCase());
   const current=candidates.find(w=>w.address.toLowerCase()===selected.toLowerCase())||null;
 
