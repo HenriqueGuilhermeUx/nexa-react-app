@@ -1,4 +1,7 @@
 [build]
+  # Temporary PR-only override of Netlify's incorrect base-directory content skip.
+  # Remove before merge to production; this branch remains draft.
+  ignore = "/bin/false"
   command = "npm install --no-audit --no-fund && npm run check"
   publish = "dist"
 
@@ -35,3 +38,8 @@
   from = "/*"
   to = "/index.html"
   status = 200
+
+# Build the wallet view-only pilot in deploy previews even when Netlify's
+# content-diff heuristic incorrectly reports no changes. Production unchanged.
+[context.deploy-preview]
+  ignore = "false"

@@ -1,4 +1,5 @@
 import InvestCreditPreview from './InvestCreditPreview.jsx';
+import ExternalWalletSession from './ExternalWalletSession.jsx';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
   useCreateWallet,
@@ -521,6 +522,11 @@ function Dashboard({session, user, profile, history, onRefresh, onLogout}) {
         )}
 
         <InvestCreditPreview accessToken={session.accessToken} apiUrl={API_URL} />
+
+        <ExternalWalletSession
+          accessToken={session.accessToken}
+          nexaEmail={user?.email || session?.user?.email}
+        />
 
         <section className="content-grid">
           <article className="content-card">
