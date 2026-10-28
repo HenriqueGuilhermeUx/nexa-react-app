@@ -1,4 +1,4 @@
-import {useEffect, useMemo, useState} from 'react';
+import {useEffect, useMemo, useRef, useState} from 'react';
 import {useConnectWallet, usePrivy, useWallets} from '@privy-io/react-auth';
 
 // View-only pilot: no challenge, no server-side binding and no transfer methods.
@@ -29,6 +29,7 @@ export default function ExternalWalletSession({accessToken, nexaEmail}) {
   const [selected, setSelected] = useState('');
   const [error, setError] = useState('');
   const [verified, setVerified] = useState(null);
+  const verificationEpoch = useRef(0);
   const options = useMemo(() => externalWallets(wallets), [wallets]);
   const emailMatches = authenticated &&
     !!nexaEmail &&
@@ -37,7 +38,11 @@ export default function ExternalWalletSession({accessToken, nexaEmail}) {
     wallet.address.toLowerCase() === selected.toLowerCase());
 
   // Never display a previously selected address as verified after account changes.
-  useEffect(() => {setSelected(''); setVerified(null);}, [accessToken, nexaEmail]);
+  useEffect(() => {
+    verificationEpoch.current++;
+    setSelected('');
+    setVerified(null);
+  }, [accessToken, nexaEmail, authenticated, user?.id]);
   useEffect(() => {
     if (!current) return;
     const getProvider = typeof current.getEthereumProvider === 'function'
@@ -55,8 +60,12 @@ export default function ExternalWalletSession({accessToken, nexaEmail}) {
         connected.on('disconnect', invalidate);
       }).catch(() => {});
     } catch { /* Unavailable provider: local verification must be retried. */ }
-    function invalidate() {setVerified(null);}
+    function invalidate() {
+      verificationEpoch.current++;
+      setVerified(null);
+    }
     return () => {
+      verificationEpoch.current++;
       live = false;
       if (typeof provider?.removeListener === 'function') {
         provider.removeListener('accountsChanged', invalidate);
@@ -84,6 +93,7 @@ export default function ExternalWalletSession({accessToken, nexaEmail}) {
   }
 
   async function verifyActiveWallet() {
+    const epoch = ++verificationEpoch.current;
     setError('');
     setVerified(null);
     if (!authenticated || !emailMatches || !accessToken || !current) {
@@ -103,11 +113,22 @@ export default function ExternalWalletSession({accessToken, nexaEmail}) {
         throw Error('O endereço selecionado não está ativo nessa carteira. Reconecte e tente novamente.');
       }
       const chainId = await provider.request({method:'eth_chainId'});
+      const accountsAfter = await provider.request({method:'eth_accounts'});
+      const chainAfter = await provider.request({method:'eth_chainId'});
+      if (!Array.isArray(accountsAfter) || !accountsAfter.some(value =>
+        typeof value === 'string' && value.toLowerCase() === current.address.toLowerCase()) ||
+        chainAfter !== chainId) {
+        throw Error('A conta ou rede mudou durante a verificação. Confira novamente.');
+      }
       if (typeof chainId !== 'string' || !/^0x[0-9a-f]+$/i.test(chainId)) {
         throw Error('A carteira não informou uma rede EVM válida.');
       }
-      setVerified({address:current.address, chainId:chainId.toLowerCase()});
-    } catch(e) {setError(e?.message || 'Não foi possível verificar a carteira externa.');}
+      if (epoch === verificationEpoch.current) {
+        setVerified({address:current.address, chainId:chainId.toLowerCase()});
+      }
+    } catch(e) {
+      if (epoch === verificationEpoch.current) setError(e?.message || 'Não foi possível verificar a carteira externa.');
+    }
   }
 
   return <section className="content-card" aria-label="Carteiras externas em visualização">
@@ -117,8 +138,9 @@ export default function ExternalWalletSession({accessToken, nexaEmail}) {
       para visualizar seu endereço nesta sessão. A conexão é gratuita.
     </p>
     <p className="notice notice-info">
-      Modo de visualização: esta conexão não vincula a carteira permanentemente à Nexa,
+      Modo de visualização: esta tela não registra vínculo financeiro no backend da Nexa,
       não consulta nem credita saldos e não autoriza transferências, taxas ou Pix.
+      O Privy ou a extensão da carteira podem manter a conexão até você desconectar.
       Nunca informe sua frase de recuperação.
     </p>
     {!authenticated && <p className="muted">Confirme sua identidade Privy antes de continuar.</p>}
@@ -131,7 +153,7 @@ export default function ExternalWalletSession({accessToken, nexaEmail}) {
     </button>
     {walletsReady && emailMatches && options.length > 0 && <label>
       <span className="muted">Carteira conectada nesta sessão</span>
-      <select value={selected} onChange={event => {setSelected(event.target.value); setVerified(null);}}>
+      <select value={selected} onChange={event => {verificationEpoch.current++; setSelected(event.target.value); setVerified(null);}}>
         <option value="">Selecione um endereço</option>
         {options.map(wallet => <option key={wallet.address} value={wallet.address}>
           {wallet.walletClientType || 'Carteira externa'} · {compact(wallet.address)}
