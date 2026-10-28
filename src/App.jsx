@@ -1,3 +1,4 @@
+import InvestCreditPreview from './InvestCreditPreview.jsx';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
   useCreateWallet,
@@ -518,6 +519,8 @@ function Dashboard({session, user, profile, history, onRefresh, onLogout}) {
             contábil e operacional ser concluída.
           </div>
         )}
+
+        <InvestCreditPreview accessToken={session.accessToken} apiUrl={API_URL} />
 
         <section className="content-grid">
           <article className="content-card">
