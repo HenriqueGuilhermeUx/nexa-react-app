@@ -1,4 +1,4 @@
-import {useMemo, useState} from 'react';
+import {useEffect, useMemo, useState} from 'react';
 import {useConnectWallet, usePrivy, useWallets} from '@privy-io/react-auth';
 
 // View-only pilot: no challenge, no server-side binding and no transfer methods.
@@ -28,12 +28,37 @@ export default function ExternalWalletSession({accessToken, nexaEmail}) {
   const {connectWallet} = useConnectWallet();
   const [selected, setSelected] = useState('');
   const [error, setError] = useState('');
+  const [verified, setVerified] = useState(null);
   const options = useMemo(() => externalWallets(wallets), [wallets]);
   const emailMatches = authenticated &&
     !!nexaEmail &&
     accountEmail(user) === String(nexaEmail).trim().toLowerCase();
   const current = options.find(wallet =>
     wallet.address.toLowerCase() === selected.toLowerCase());
+
+  // Never display a previously selected address as verified after account changes.
+  useEffect(() => {setSelected(''); setVerified(null);}, [accessToken, nexaEmail]);
+  useEffect(() => {
+    if (!current || typeof current.getEthereumProvider !== 'function') return;
+    let live = true;
+    let provider;
+    current.getEthereumProvider().then(connected => {
+      if (!live || typeof connected?.on !== 'function') return;
+      provider = connected;
+      connected.on('accountsChanged', invalidate);
+      connected.on('chainChanged', invalidate);
+      connected.on('disconnect', invalidate);
+    }).catch(() => {});
+    function invalidate() {setVerified(null);}
+    return () => {
+      live = false;
+      if (typeof provider?.removeListener === 'function') {
+        provider.removeListener('accountsChanged', invalidate);
+        provider.removeListener('chainChanged', invalidate);
+        provider.removeListener('disconnect', invalidate);
+      }
+    };
+  }, [current]);
 
   if (!ENABLED || !accessToken || !nexaEmail) return null;
 
@@ -50,6 +75,33 @@ export default function ExternalWalletSession({accessToken, nexaEmail}) {
     } catch {
       setError('Não foi possível abrir o seletor de carteiras.');
     }
+  }
+
+  async function verifyActiveWallet() {
+    setError('');
+    setVerified(null);
+    if (!authenticated || !emailMatches || !accessToken || !current) {
+      setError('Entre na Nexa e escolha uma carteira externa antes de verificar.');
+      return;
+    }
+    try {
+      const provider = typeof current.getEthereumProvider === 'function'
+        ? await current.getEthereumProvider()
+        : typeof current.getProvider === 'function'
+          ? await current.getProvider() : null;
+      if (typeof provider?.request !== 'function') throw Error('Carteira sem provedor de leitura disponível.');
+      // Read-only EIP-1193 calls: no message signature, transaction or network switch.
+      const accounts = await provider.request({method:'eth_accounts'});
+      if (!Array.isArray(accounts) || !accounts.some(value =>
+        typeof value === 'string' && value.toLowerCase() === current.address.toLowerCase())) {
+        throw Error('O endereço selecionado não está ativo nessa carteira. Reconecte e tente novamente.');
+      }
+      const chainId = await provider.request({method:'eth_chainId'});
+      if (typeof chainId !== 'string' || !/^0x[0-9a-f]+$/i.test(chainId)) {
+        throw Error('A carteira não informou uma rede EVM válida.');
+      }
+      setVerified({address:current.address, chainId:chainId.toLowerCase()});
+    } catch(e) {setError(e?.message || 'Não foi possível verificar a carteira externa.');}
   }
 
   return <section className="content-card" aria-label="Carteiras externas em visualização">
@@ -73,17 +125,23 @@ export default function ExternalWalletSession({accessToken, nexaEmail}) {
     </button>
     {walletsReady && emailMatches && options.length > 0 && <label>
       <span className="muted">Carteira conectada nesta sessão</span>
-      <select value={selected} onChange={event => setSelected(event.target.value)}>
+      <select value={selected} onChange={event => {setSelected(event.target.value); setVerified(null);}}>
         <option value="">Selecione um endereço</option>
         {options.map(wallet => <option key={wallet.address} value={wallet.address}>
           {wallet.walletClientType || 'Carteira externa'} · {compact(wallet.address)}
         </option>)}
       </select>
     </label>}
-    {emailMatches && current && <p className="muted">
-      Endereço externo: <strong>{current.address}</strong>.
-      Rede e posse on-chain não verificadas nesta etapa.
-    </p>}
+    {emailMatches && current && <div>
+      <button type="button" className="secondary-button" onClick={verifyActiveWallet}>
+        Verificar endereço e rede (somente leitura)
+      </button>
+      {verified?.address?.toLowerCase() === current.address.toLowerCase() && <p className="muted">
+        Endereço ativo: <strong>{verified.address}</strong>.
+        Rede informada pela carteira: {verified.chainId === '0x89' ? 'Polygon (137)' : verified.chainId + ' (não Polygon)'}.
+        Esta verificação local não comprova propriedade no servidor nem cria vínculo permanente.
+      </p>}
+    </div>}
     {error && <p role="alert" className="notice notice-warning">{error}</p>}
   </section>;
 }
