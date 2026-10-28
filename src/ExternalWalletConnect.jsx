@@ -6,6 +6,8 @@ const ADDRESS=/^0x[0-9a-fA-F]{40}$/;
 const CHALLENGE=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const API=String(import.meta.env.VITE_WALLET_CONNECT_LAB_API_URL || '').replace(/\/$/,'');
 const LAB_ENABLED=import.meta.env.VITE_WALLET_CONNECT_LAB_ENABLED==='true';
+// Independent, nonfinancial in-app preview. Disabled unless explicitly enabled.
+const SESSION_PREVIEW_ENABLED=import.meta.env.VITE_WALLET_CONNECT_SESSION_PREVIEW_ENABLED==='true';
 const PRODUCTION_API='https://nexa-backend-p2u0.onrender.com/api/v1';
 
 function assertLabApi(){
@@ -85,7 +87,7 @@ export default function ExternalWalletConnect({accessToken,nexaEmail,qaIdentityV
     return ()=>{active=false;};
   },[accessToken,emailMatch]);
 
-  if(!LAB_ENABLED)return null;
+  if(!LAB_ENABLED&&!SESSION_PREVIEW_ENABLED)return null;
 
   async function connect(){
     setError('');setInfo('');setState('connecting');
@@ -166,16 +168,16 @@ export default function ExternalWalletConnect({accessToken,nexaEmail,qaIdentityV
     finally{setState('idle');}
   }
 
-  return <section className="content-card external-wallet-lab" aria-label="Wallet Connect homologação">
+  return <section className="content-card external-wallet-lab" aria-label={LAB_ENABLED?'Wallet Connect homologação':'Carteira externa em visualização'}>
     <div className="external-wallet-heading">
       <div>
-        <small>HOMOLOGAÇÃO ISOLADA · BRASIL E GLOBAL</small>
+        <small>{LAB_ENABLED?'HOMOLOGAÇÃO ISOLADA · BRASIL E GLOBAL':'VISUALIZAÇÃO DE CARTEIRA · BRASIL E GLOBAL'}</small>
         <h2>Conectar carteira externa</h2>
         <p className="muted">MetaMask, Rabby, Coinbase Wallet, Trust Wallet e outras opções oferecidas pelo Privy. A Nexa não solicita sua chave privada.</p>
       </div>
       <span className="external-wallet-pill">0% taxa Nexa na entrada</span>
     </div>
-    <p className="muted">Esta etapa comprova propriedade da carteira; não transfere nem credita USDC. Polygon · USDC nativo.</p>
+    <p className="muted">{LAB_ENABLED?'Esta etapa comprova propriedade da carteira; não transfere nem credita USDC. Polygon · USDC nativo.':'Conecte uma carteira externa para consultar seu endereço nesta sessão. Esta visualização não comprova propriedade no servidor, não cria vínculo permanente com a conta Nexa e não permite transferências ou pagamentos. Para receber USDC, verifique a rede Polygon na carteira de destino.'}</p>
     <label className="external-wallet-field">Mercado
       <select value={market} disabled={state!=='idle'} onChange={e=>setMarket(e.target.value)}>
         <option value="BR">Nexa Brasil</option>
@@ -200,11 +202,11 @@ export default function ExternalWalletConnect({accessToken,nexaEmail,qaIdentityV
       </select>
     </label>}
     {current&&<div className="external-wallet-actions">
-      <span className="muted">{short(current.address)} · Polygon</span>
-      <button className="primary-button" type="button" disabled={state!=='idle'||!emailMatch||!accessToken}
-        onClick={link}>{state==='signing'?'Confirmando…':'Assinar e vincular'}</button>
+      <span className="muted">{short(current.address)} · {LAB_ENABLED?'Polygon':'endereço externo (rede não verificada)'}</span>
+      {LAB_ENABLED&&<button className="primary-button" type="button" disabled={state!=='idle'||!emailMatch||!accessToken}
+        onClick={link}>{state==='signing'?'Confirmando…':'Assinar e vincular'}</button>}
     </div>}
-    {links.length>0&&<div className="external-wallet-linked">
+    {LAB_ENABLED&&links.length>0&&<div className="external-wallet-linked">
       <strong>Carteiras vinculadas nesta conta</strong>
       {links.map((w,i)=><div key={String(w.address)+'-'+i} className="external-wallet-linked-row">
         <span>{short(w.address)} · Polygon</span>
