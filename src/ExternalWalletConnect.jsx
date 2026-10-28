@@ -175,7 +175,7 @@ export default function ExternalWalletConnect({accessToken,nexaEmail,qaIdentityV
         <h2>Conectar carteira externa</h2>
         <p className="muted">MetaMask, Rabby, Coinbase Wallet, Trust Wallet e outras opções oferecidas pelo Privy. A Nexa não solicita sua chave privada.</p>
       </div>
-      <span className="external-wallet-pill">0% taxa Nexa na entrada</span>
+      <span className="external-wallet-pill">{LAB_ENABLED?'0% taxa Nexa na entrada':'Conectar é grátis'}</span>
     </div>
     <p className="muted">{LAB_ENABLED?'Esta etapa comprova propriedade da carteira; não transfere nem credita USDC. Polygon · USDC nativo.':'Conecte uma carteira externa para consultar seu endereço nesta sessão. Esta visualização não comprova propriedade no servidor, não cria vínculo permanente com a conta Nexa e não permite transferências ou pagamentos. Para receber USDC, verifique a rede Polygon na carteira de destino.'}</p>
     <label className="external-wallet-field">Mercado
