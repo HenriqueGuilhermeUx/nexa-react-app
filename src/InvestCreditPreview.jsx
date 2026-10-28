@@ -122,7 +122,7 @@ export default function InvestCreditPreview({accessToken, apiUrl}) {
         <label>Queda simulada (%) <input required type="number" min="0" max="100" step="1" value={drop} onChange={(e) => setDrop(e.target.value)} /></label>
         <button type="submit" className="secondary-button" disabled={working || !previewAvailable}>{working ? 'Calculando…' : 'Simular cenário'}</button>
       </form>
-      {result && <p role="status">Após a queda, o valor da garantia seria US$ {result.stressedCollateralUsd.toFixed(2)} e a dívida equivaleria a {result.stressedLtvPercent.toFixed(1)}% dela. {result.outsideReferenceLtv ? 'Acima do percentual educativo de referência.' : 'Dentro do percentual educativo de referência.'}</p>}
+      {result && <p role="status">Após a queda, o valor da garantia seria US$ {Number(result.stressedCollateralUsd).toFixed(2)} e a dívida equivaleria a {typeof result.stressedLtvPercent === 'number' && Number.isFinite(result.stressedLtvPercent) ? `${result.stressedLtvPercent.toFixed(1)}%` : 'um percentual não calculável (garantia zerada)'} dela. {result.outsideReferenceLtv ? 'Acima do percentual educativo de referência.' : 'Dentro do percentual educativo de referência.'}</p>}
       {error && <p role="alert" className="muted">{error}</p>}
       <p className="muted"><small>Simulação educativa, sem proposta de crédito, preço executável ou previsão de liquidação. Taxas e limites reais dependerão dos protocolos e parceiros habilitados.</small></p>
     </section>
