@@ -37,7 +37,7 @@ export default function ExternalWalletSession({accessToken, nexaEmail}) {
 
   if (!ENABLED || !accessToken || !nexaEmail) return null;
 
-  function connect() {
+  async function connect() {
     setError('');
     if (!ready) { setError('A autenticação ainda está carregando.'); return; }
     if (!authenticated) { login(); return; }
@@ -46,7 +46,7 @@ export default function ExternalWalletSession({accessToken, nexaEmail}) {
       return;
     }
     try {
-      connectWallet();
+      await connectWallet();
     } catch {
       setError('Não foi possível abrir o seletor de carteiras.');
     }
