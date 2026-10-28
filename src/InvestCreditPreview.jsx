@@ -3,6 +3,9 @@ import {useEffect, useState} from 'react';
 /** Read-only preview. Does not authorize, sign or execute any financial operation. */
 export default function InvestCreditPreview({accessToken, apiUrl}) {
   const [catalog, setCatalog] = useState(null);
+  const [aavePosition, setAavePosition] = useState(null);
+  const [aaveMarkets, setAaveMarkets] = useState(null);
+  const [aaveStatus, setAaveStatus] = useState('loading');
   const [error, setError] = useState('');
   const [collateral, setCollateral] = useState('1000');
   const [borrow, setBorrow] = useState('400');
@@ -20,6 +23,28 @@ export default function InvestCreditPreview({accessToken, apiUrl}) {
       return response.json();
     }).then((data) => {if (!cancelled) setCatalog(data);})
       .catch((caught) => {if (!cancelled) setError(caught.message);});
+    return () => {cancelled = true;};
+  }, [accessToken, apiUrl]);
+
+  useEffect(() => {
+    if (!accessToken) return;
+    let cancelled = false;
+    const headers = {Authorization: 'Bearer ' + accessToken};
+    const base = apiUrl.replace(/\/$/, '') + '/invest-credit/aave/';
+    async function read(endpoint) {
+      const response = await fetch(base + endpoint, {headers});
+      if (!response.ok) return null;
+      const data = await response.json();
+      return data?.informationalOnly === true ? data : null;
+    }
+    Promise.all([read('me'), read('markets')])
+      .then(([account, markets]) => {
+        if (cancelled) return;
+        setAavePosition(account?.position || null);
+        setAaveMarkets(markets?.reserves || null);
+        setAaveStatus(account || markets ? 'available' : 'unavailable');
+      })
+      .catch(() => {if (!cancelled) setAaveStatus('unavailable');});
     return () => {cancelled = true;};
   }, [accessToken, apiUrl]);
 
@@ -65,6 +90,30 @@ export default function InvestCreditPreview({accessToken, apiUrl}) {
           ))}
         </div>
       ) : <p className="muted">Produtos em preparação.</p>}
+      <h3>Minha posição Aave</h3>
+      {aavePosition ? (
+        <div className="history-list" aria-label="Posição Aave consultada na blockchain">
+          <p>Rede: {aavePosition.chainId} · Carteira: {aavePosition.walletAddress}</p>
+          <p>Saúde da posição: {aavePosition.healthFactor ?? 'Sem dívida registrada'}</p>
+          <p className="muted">Garantia e dívida são apresentadas nas unidades-base do protocolo, não em dólares: {aavePosition.totalCollateralBase} / {aavePosition.totalDebtBase}.</p>
+        </div>
+      ) : <p className="muted">{aaveStatus === 'loading' ? 'Consultando posições…' : 'Consulta Aave não habilitada ou carteira ainda não elegível.'}</p>}
+      {aaveMarkets?.length > 0 && (
+        <div>
+          <h3>Reservas Aave — consulta</h3>
+          <p className="muted">Ativos e limites observados on-chain; disponibilidade não significa elegibilidade para empréstimo.</p>
+          <div className="history-list">
+            {aaveMarkets.filter((reserve) => reserve.active && !reserve.paused && !reserve.frozen).slice(0, 8).map((reserve) => (
+              <div className="history-item" key={reserve.asset}>
+                <div><strong>{reserve.asset.slice(0, 8)}…{reserve.asset.slice(-4)}</strong>
+                  <small>LTV {reserve.ltvBps / 100}% · Limite de liquidação {reserve.liquidationThresholdBps / 100}%</small>
+                </div>
+                <span>{reserve.borrowingEnabled ? 'Empréstimo previsto' : 'Sem empréstimo'}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       <h3>Simule o efeito de uma queda na garantia</h3>
       {!previewAvailable && <p className="muted" role="status">Simulações ainda não habilitadas para esta conta.</p>}
       <form onSubmit={simulate}>
