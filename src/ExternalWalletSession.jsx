@@ -39,16 +39,22 @@ export default function ExternalWalletSession({accessToken, nexaEmail}) {
   // Never display a previously selected address as verified after account changes.
   useEffect(() => {setSelected(''); setVerified(null);}, [accessToken, nexaEmail]);
   useEffect(() => {
-    if (!current || typeof current.getEthereumProvider !== 'function') return;
+    if (!current) return;
+    const getProvider = typeof current.getEthereumProvider === 'function'
+      ? () => current.getEthereumProvider()
+      : typeof current.getProvider === 'function' ? () => current.getProvider() : null;
+    if (!getProvider) return;
     let live = true;
     let provider;
-    current.getEthereumProvider().then(connected => {
-      if (!live || typeof connected?.on !== 'function') return;
-      provider = connected;
-      connected.on('accountsChanged', invalidate);
-      connected.on('chainChanged', invalidate);
-      connected.on('disconnect', invalidate);
-    }).catch(() => {});
+    try {
+      Promise.resolve(getProvider()).then(connected => {
+        if (!live || typeof connected?.on !== 'function') return;
+        provider = connected;
+        connected.on('accountsChanged', invalidate);
+        connected.on('chainChanged', invalidate);
+        connected.on('disconnect', invalidate);
+      }).catch(() => {});
+    } catch { /* Unavailable provider: local verification must be retried. */ }
     function invalidate() {setVerified(null);}
     return () => {
       live = false;
