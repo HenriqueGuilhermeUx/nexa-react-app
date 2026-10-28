@@ -35,3 +35,8 @@
   from = "/*"
   to = "/index.html"
   status = 200
+
+# Build the wallet view-only pilot in deploy previews even when Netlify's
+# content-diff heuristic incorrectly reports no changes. Production unchanged.
+[context.deploy-preview]
+  ignore = "false"
