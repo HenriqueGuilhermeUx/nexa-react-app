@@ -1,0 +1,33 @@
+name: Nexa Premium Agentics UI — Build (No Deploy)
+
+on:
+  push:
+    branches:
+      - feat/nexa-premium-agentics-readonly-20261101
+  pull_request:
+    paths:
+      - 'src/NexaPremiumAgentics.jsx'
+      - 'src/App.jsx'
+      - '.github/workflows/nexa-premium-agentics-ui.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.19.4'
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run check
+      - name: Verify no financial execution routes in consultant component
+        run: |
+          if grep -En "(/payment|/transfer|eth_sendTransaction|localStorage|sessionStorage)" src/NexaPremiumAgentics.jsx; then
+            echo 'Unexpected financial execution or credential persistence in consultant'
+            exit 1
+          fi
