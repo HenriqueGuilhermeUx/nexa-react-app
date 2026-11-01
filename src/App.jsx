@@ -1,4 +1,5 @@
 import InvestCreditPreview from './InvestCreditPreview.jsx';
+import NexaPremiumAgentics from './NexaPremiumAgentics.jsx';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
   useCreateWallet,
@@ -475,6 +476,10 @@ function Dashboard({session, user, profile, history, onRefresh, onLogout}) {
       </header>
 
       <main className="portal-content">
+        <details className="hero-card" style={{marginBottom: 16}}>
+          <summary>Consultor Nexa Premium · acesso antecipado</summary>
+          <NexaPremiumAgentics accessToken={session?.accessToken} apiBaseUrl={API_URL} />
+        </details>
         <section className="hero-card">
           <div>
             <StatusPill tone={isLegacy ? 'neutral' : 'success'}>
