@@ -22,8 +22,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20.19.4'
-          cache: npm
-      - run: npm ci --no-audit --no-fund
+      - run: npm install --no-audit --no-fund
       - run: npm run check
       - name: Verify no financial execution routes in consultant component
         run: |
