@@ -1,4 +1,4 @@
-import {useCallback, useEffect, useState} from 'react';
+import {useCallback, useEffect, useRef, useState} from 'react';
 
 /**
  * Nexa Premium financial consultant (read-only).
@@ -7,6 +7,7 @@ import {useCallback, useEffect, useState} from 'react';
  */
 export default function NexaPremiumAgentics({accessToken, apiBaseUrl}) {
   const [availability, setAvailability] = useState(null);
+  const requestRef = useRef(null);
   const [report, setReport] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -30,11 +31,14 @@ export default function NexaPremiumAgentics({accessToken, apiBaseUrl}) {
   }, [accessToken, base]);
 
   useEffect(() => {
+    requestRef.current?.abort();
     setAvailability(null);
     setReport(null);
+    setBusy(false);
     setError('');
     if (!accessToken) return;
     const controller = new AbortController();
+    requestRef.current = controller;
     load('/agentic/accounts/availability', controller.signal)
       .then(setAvailability)
       .catch(e => {if (e.name !== 'AbortError') setError(e.message);});
@@ -43,19 +47,22 @@ export default function NexaPremiumAgentics({accessToken, apiBaseUrl}) {
 
   async function consult() {
     if (!accessToken || !availability?.available || busy) return;
+    const controller = new AbortController();
+    requestRef.current?.abort();
+    requestRef.current = controller;
     setBusy(true);
     setError('');
     setReport(null);
     try {
-      const data = await load('/agentic/consultant-review/my-finances');
+      const data = await load('/agentic/consultant-review/my-finances', controller.signal);
       if (data?.financialExecutionEnabled !== false) {
         throw new Error('Resposta inesperada do serviço de consulta.');
       }
-      setReport(data);
+      if (!controller.signal.aborted) setReport(data);
     } catch (e) {
-      setError(e.message);
+      if (e.name !== 'AbortError') setError(e.message);
     } finally {
-      setBusy(false);
+      if (!controller.signal.aborted) setBusy(false);
     }
   }
 
