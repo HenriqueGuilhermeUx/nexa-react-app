@@ -476,10 +476,12 @@ function Dashboard({session, user, profile, history, onRefresh, onLogout}) {
       </header>
 
       <main className="portal-content">
-        <details className="hero-card" style={{marginBottom: 16}}>
-          <summary>Consultor Nexa Premium · acesso antecipado</summary>
-          <NexaPremiumAgentics accessToken={session?.accessToken} apiBaseUrl={API_URL} />
-        </details>
+        {import.meta.env.VITE_NEXA_AGENTICS_PREVIEW_ENABLED === 'true' && (
+          <details className="hero-card" style={{marginBottom: 16}}>
+            <summary>Consultor Nexa Premium · acesso antecipado</summary>
+            <NexaPremiumAgentics accessToken={session?.accessToken} apiBaseUrl={API_URL} />
+          </details>
+        )}
         <section className="hero-card">
           <div>
             <StatusPill tone={isLegacy ? 'neutral' : 'success'}>
