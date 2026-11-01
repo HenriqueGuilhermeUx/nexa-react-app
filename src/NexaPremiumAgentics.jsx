@@ -11,6 +11,13 @@ export default function NexaPremiumAgentics({accessToken, apiBaseUrl}) {
   const [report, setReport] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const unavailableMessages = {
+    AGENTIC_PREMIUM_REQUIRED: 'Este recurso é exclusivo de clientes Nexa Premium.',
+    AGENTIC_PRODUCTION_CONSENT_REQUIRED: 'Seu consentimento para consultas financeiras ainda não foi registrado.',
+    AGENTIC_PRODUCTION_USER_NOT_APPROVED: 'O acesso antecipado ainda não foi liberado para esta conta.',
+    AGENTIC_ACCOUNT_READ_DISABLED: 'O consultor ainda não foi ativado neste ambiente.',
+    AGENTIC_USER_REVOKED: 'Esta conta não está habilitada para consultas.',
+  };
   const base = String(apiBaseUrl || import.meta.env.VITE_API_URL ||
     'https://nexa-backend-p2u0.onrender.com/api/v1').replace(/\/$/, '');
 
@@ -55,7 +62,7 @@ export default function NexaPremiumAgentics({accessToken, apiBaseUrl}) {
     setReport(null);
     try {
       const data = await load('/agentic/consultant-review/my-finances', controller.signal);
-      if (data?.financialExecutionEnabled !== false) {
+      if (data?.kind !== 'NEXA_AGENTICS_CONSULTANT_REVIEW' || data?.financialExecutionEnabled !== false || data?.investmentAdviceEnabled !== false || data?.combinedValue !== null || !['isolated_staging_read_only', 'production_invite_only_read_only'].includes(data?.mode)) {
         throw new Error('Resposta inesperada do serviço de consulta.');
       }
       if (!controller.signal.aborted) setReport(data);
@@ -71,7 +78,7 @@ export default function NexaPremiumAgentics({accessToken, apiBaseUrl}) {
     <p>Consulte informações financeiras e análises de sua conta. Nenhuma operação é executada.</p>
     {!accessToken && <p>Entre na sua conta para consultar.</p>}
     {accessToken && !availability && !error && <p>Verificando disponibilidade…</p>}
-    {availability?.available === false && <p>Consultor ainda não disponível para esta conta.</p>}
+    {availability?.available === false && <p>{unavailableMessages[availability.reason] || 'Consultor ainda não disponível para esta conta.'}</p>}
     {availability?.available === true && <button type="button" disabled={busy} onClick={consult}>
       {busy ? 'Analisando…' : 'Consultar minhas finanças'}
     </button>}
