@@ -456,6 +456,7 @@ function WalletActivation({
 }
 
 function Dashboard({session, user, profile, history, onRefresh, onLogout}) {
+  const [consultantOpen, setConsultantOpen] = useState(false);
   const wallet = profile?.wallet || {};
   const isLegacy = Boolean(profile?.isLegacyBeta);
   const directReady = Boolean(profile?.directSettlementReady);
@@ -477,9 +478,9 @@ function Dashboard({session, user, profile, history, onRefresh, onLogout}) {
 
       <main className="portal-content">
         {import.meta.env.VITE_NEXA_AGENTICS_PREVIEW_ENABLED === 'true' && (
-          <details className="hero-card" style={{marginBottom: 16}}>
+          <details className="hero-card" style={{marginBottom: 16}} onToggle={(event) => setConsultantOpen(event.currentTarget.open)}>
             <summary>Consultor Nexa Premium · acesso antecipado</summary>
-            <NexaPremiumAgentics accessToken={session?.accessToken} apiBaseUrl={API_URL} />
+            {consultantOpen && <NexaPremiumAgentics accessToken={session?.accessToken} apiBaseUrl={API_URL} />}
           </details>
         )}
         <section className="hero-card">
