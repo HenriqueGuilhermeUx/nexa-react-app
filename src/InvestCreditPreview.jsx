@@ -18,7 +18,7 @@ export default function InvestCreditPreview({accessToken, apiUrl}) {
     if (!accessToken) return;
     let cancelled = false;
     const controller = new AbortController();
-    fetch(apiUrl.replace(/\\/$/, '') + '/invest-credit/aave/status', {
+    fetch(apiUrl.replace(/\/$/, '') + '/invest-credit/aave/status', {
       headers: {Authorization: 'Bearer ' + accessToken},
       signal: controller.signal,
     }).then(async (response) => {
