@@ -50,7 +50,7 @@ export default function NexaPremiumAgentics({accessToken, apiBaseUrl}) {
     requestRef.current = controller;
     Promise.all([load('/agentic/accounts/availability', controller.signal),load('/agentic/accounts/consent',controller.signal)])
       .then(([availabilityData,consentData])=>{setAvailability(availabilityData);setConsent(consentData);})
-      .catch(e => {if (e.name !== 'AbortError') setError(e.message);});
+      .catch(e => {if (e.name !== 'AbortError') {setAvailability({available:false,reason:'AGENTIC_ACCOUNT_READ_DISABLED'});setConsent(null);}});
     return () => controller.abort();
   }, [accessToken, load]);
 
