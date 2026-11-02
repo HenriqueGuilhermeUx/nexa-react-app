@@ -90,6 +90,21 @@ export default function NexaPremiumAgentics({accessToken, apiBaseUrl}) {
         ? <ul>{report.observations.map((item, index) =>
           <li key={index}>{typeof item === 'string' ? item : String(item?.message || item?.text || item?.summary || 'Observação disponível')}</li>)}</ul>
         : <p>Não há observações disponíveis para esta consulta.</p>}
+      {report.evidence && <div aria-label="Fontes financeiras consultadas">
+        <h4>Fontes consultadas separadamente</h4>
+        <ul>
+          <li>Histórico contábil BRL: {report.evidence.brlLedger?.status === 'historical_net' && Number.isFinite(report.evidence.brlLedger.netBrl)
+            ? report.evidence.brlLedger.netBrl.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'}) + ' (saldo contábil histórico, não disponível para Pix)'
+            : 'indisponível'}</li>
+          <li>USDC operacional: {report.evidence.operationalUsdc?.status === 'read_only' && Number.isFinite(report.evidence.operationalUsdc.operationalUsdc)
+            ? report.evidence.operationalUsdc.operationalUsdc.toLocaleString('pt-BR', {maximumFractionDigits: 8}) + ' USDC (registro operacional, não saldo disponível para saque)'
+            : 'indisponível'}</li>
+          <li>Carteira Polygon: {report.evidence.polygonWallet?.status === 'read_only'
+            ? 'dados on-chain consultados; confira os ativos na sua carteira'
+            : 'indisponível'}</li>
+        </ul>
+        <p>Essas fontes podem se sobrepor e não devem ser somadas.</p>
+      </div>}
       {Array.isArray(report.warnings) && report.warnings.length > 0 &&
         <p>Algumas fontes podem estar indisponíveis ou desatualizadas. Confira os dados na sua conta.</p>}
       <small>Consulta informativa, sem movimentações ou recomendações de investimento.</small>
