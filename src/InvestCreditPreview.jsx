@@ -2,6 +2,7 @@ import {useEffect, useState} from 'react';
 
 /** Read-only preview. Does not authorize, sign or execute any financial operation. */
 export default function InvestCreditPreview({accessToken, apiUrl}) {
+  const [operationalStatus, setOperationalStatus] = useState(null);
   const [catalog, setCatalog] = useState(null);
   const [aavePosition, setAavePosition] = useState(null);
   const [aaveMarkets, setAaveMarkets] = useState(null);
@@ -13,6 +14,28 @@ export default function InvestCreditPreview({accessToken, apiUrl}) {
   const [result, setResult] = useState(null);
   const [working, setWorking] = useState(false);
   const previewAvailable = Boolean(catalog?.products?.some((product) => product.status === 'information_only'));
+  useEffect(() => {
+    if (!accessToken) return;
+    let cancelled = false;
+    const controller = new AbortController();
+    fetch(apiUrl.replace(/\\/$/, '') + '/invest-credit/aave/status', {
+      headers: {Authorization: 'Bearer ' + accessToken},
+      signal: controller.signal,
+    }).then(async (response) => {
+      if (!response.ok) throw new Error('Status indisponível');
+      return response.json();
+    }).then((data) => {
+      if (cancelled) return;
+      if (data?.success === true && data?.mode === 'INFORMATION_ONLY' &&
+          data.executionEnabled === false && data.supplyEnabled === false &&
+          data.borrowEnabled === false && data.repayEnabled === false &&
+          data.withdrawEnabled === false) {
+        setOperationalStatus(data);
+      }
+    }).catch(() => { if (!cancelled) setOperationalStatus(null); });
+    return () => {cancelled = true; controller.abort();};
+  }, [accessToken, apiUrl]);
+
   useEffect(() => {
     if (!accessToken) return;
     let cancelled = false;
@@ -79,6 +102,12 @@ export default function InvestCreditPreview({accessToken, apiUrl}) {
   return (
     <section className="content-card" aria-label="Investimentos e crédito">
       <h2>Investimentos e crédito</h2>
+      <div className="notice notice-info" role="status">
+        <strong>Aave · {operationalStatus?.readOnlyConfigured ? 'Consultas em preparação' : 'Em homologação'}</strong>
+        <p>Aplicar, tomar emprestado, amortizar e retirar garantias: ainda não disponíveis para esta conta.
+          Nenhuma transação é iniciada por este painel.</p>
+      </div>
+
       <p className="muted">Conheça as possibilidades da Nexa. Nenhuma operação de compra ou empréstimo está habilitada nesta prévia.</p>
       {catalog?.products?.length ? (
         <div className="history-list">
