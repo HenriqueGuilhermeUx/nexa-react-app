@@ -13,7 +13,7 @@ export default function NexaPremiumAgentics({accessToken, apiBaseUrl}) {
   const [error, setError] = useState('');
   const unavailableMessages = {
     AGENTIC_PREMIUM_REQUIRED: 'Este recurso é exclusivo de clientes Nexa Premium.',
-    AGENTIC_PRODUCTION_CONSENT_REQUIRED: 'Seu consentimento para consultas financeiras ainda não foi registrado.',
+    AGENTIC_PRODUCTION_CONSENT_REQUIRED: 'O consentimento para consultas financeiras ainda não está habilitado. Nenhum dado será consultado até a liberação segura.',
     AGENTIC_PRODUCTION_USER_NOT_APPROVED: 'O acesso antecipado ainda não foi liberado para esta conta.',
     AGENTIC_ACCOUNT_READ_DISABLED: 'O consultor ainda não foi ativado neste ambiente.',
     AGENTIC_USER_REVOKED: 'Esta conta não está habilitada para consultas.',
@@ -79,6 +79,7 @@ export default function NexaPremiumAgentics({accessToken, apiBaseUrl}) {
     {!accessToken && <p>Entre na sua conta para consultar.</p>}
     {accessToken && !availability && !error && <p>Verificando disponibilidade…</p>}
     {availability?.available === false && <p>{unavailableMessages[availability.reason] || 'Consultor ainda não disponível para esta conta.'}</p>}
+    {availability?.available === true && <p>Esta consulta utiliza dados da Nexa apenas para análise informativa. Você pode fechar o painel a qualquer momento; a autorização de acesso é controlada pelo servidor.</p>}
     {availability?.available === true && <button type="button" disabled={busy} onClick={consult}>
       {busy ? 'Analisando…' : 'Consultar minhas finanças'}
     </button>}
