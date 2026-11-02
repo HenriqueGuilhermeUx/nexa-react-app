@@ -9,6 +9,7 @@ export default function NexaPremiumAgentics({accessToken, apiBaseUrl}) {
   const [availability, setAvailability] = useState(null);
   const requestRef = useRef(null);
   const [report, setReport] = useState(null);
+  const [consent, setConsent] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const unavailableMessages = {
@@ -41,16 +42,41 @@ export default function NexaPremiumAgentics({accessToken, apiBaseUrl}) {
     requestRef.current?.abort();
     setAvailability(null);
     setReport(null);
+    setConsent(null);
     setBusy(false);
     setError('');
     if (!accessToken) return;
     const controller = new AbortController();
     requestRef.current = controller;
-    load('/agentic/accounts/availability', controller.signal)
-      .then(setAvailability)
+    Promise.all([load('/agentic/accounts/availability', controller.signal),load('/agentic/accounts/consent',controller.signal)])
+      .then(([availabilityData,consentData])=>{setAvailability(availabilityData);setConsent(consentData);})
       .catch(e => {if (e.name !== 'AbortError') setError(e.message);});
     return () => controller.abort();
   }, [accessToken, load]);
+
+  async function changeConsent(grant) {
+    if (!accessToken || busy) return;
+    const controller = new AbortController();
+    requestRef.current?.abort();
+    requestRef.current = controller;
+    setBusy(true);
+    setError('');
+    setReport(null);
+    try {
+      const response = await fetch(base + '/agentic/accounts/consent', {
+        method: grant ? 'POST' : 'DELETE',
+        cache: 'no-store', credentials: 'omit',
+        headers: {Authorization: 'Bearer ' + accessToken, Accept: 'application/json'},
+        signal: controller.signal,
+      });
+      if (!response.ok) throw new Error('Não foi possível atualizar sua autorização. Tente novamente.');
+      const result = await response.json();
+      if (result?.granted !== grant) throw new Error('O servidor não confirmou a autorização.');
+      const availabilityData = await load('/agentic/accounts/availability', controller.signal);
+      if (!controller.signal.aborted) {setConsent(result);setAvailability(availabilityData);}
+    } catch(e) {if(e.name !== 'AbortError')setError(e.message);}
+    finally {if(!controller.signal.aborted)setBusy(false);}
+  }
 
   async function consult() {
     if (!accessToken || !availability?.available || busy) return;
@@ -78,6 +104,11 @@ export default function NexaPremiumAgentics({accessToken, apiBaseUrl}) {
     <p>Consulte informações financeiras e análises de sua conta. Nenhuma operação é executada.</p>
     {!accessToken && <p>Entre na sua conta para consultar.</p>}
     {accessToken && !availability && !error && <p>Verificando disponibilidade…</p>}
+    {accessToken && consent && <div aria-label="Autorização para consultas financeiras">
+      <p>{consent.granted ? 'Você autorizou consultas informativas aos seus dados financeiros Nexa.' : 'Você ainda não autorizou o consultor a consultar seus dados financeiros.'}</p>
+      <p>A autorização pode ser revogada a qualquer momento. Não permite pagamentos, transferências ou investimentos.</p>
+      <button type="button" disabled={busy} onClick={()=>changeConsent(!consent.granted)}>{busy ? 'Atualizando…' : consent.granted ? 'Revogar autorização' : 'Autorizar consultas financeiras'}</button>
+    </div>}
     {availability?.available === false && <p>{unavailableMessages[availability.reason] || 'Consultor ainda não disponível para esta conta.'}</p>}
     {availability?.available === true && <p>Esta consulta utiliza dados da Nexa apenas para análise informativa. Você pode fechar o painel a qualquer momento; a autorização de acesso é controlada pelo servidor.</p>}
     {availability?.available === true && <button type="button" disabled={busy} onClick={consult}>
