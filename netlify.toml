@@ -1,6 +1,8 @@
 [build]
   command = "npm install --no-audit --no-fund && npm run check"
   publish = "dist"
+  # Do not skip production builds based on stale content-diff detection.
+  ignore = "exit 1"
 
 [build.environment]
   NODE_VERSION = "20.19.4"
