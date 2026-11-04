@@ -1,4 +1,5 @@
 import InvestCreditPreview from './InvestCreditPreview.jsx';
+import NexaPremiumAgentics from './NexaPremiumAgentics.jsx';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
   useCreateWallet,
@@ -456,6 +457,7 @@ function WalletActivation({
 }
 
 function Dashboard({session, user, profile, history, onRefresh, onLogout}) {
+  const [consultantOpen, setConsultantOpen] = useState(false);
   const wallet = profile?.wallet || {};
   const isLegacy = Boolean(profile?.isLegacyBeta);
   const directReady = Boolean(profile?.directSettlementReady);
@@ -476,6 +478,12 @@ function Dashboard({session, user, profile, history, onRefresh, onLogout}) {
       </header>
 
       <main className="portal-content">
+        {import.meta.env.VITE_NEXA_AGENTICS_PREVIEW_ENABLED === 'true' && (
+          <details className="hero-card" style={{marginBottom: 16}} onToggle={(event) => setConsultantOpen(event.currentTarget.open)}>
+            <summary>Maya · Sua assistente inteligente</summary>
+            {consultantOpen && <NexaPremiumAgentics accessToken={session?.accessToken} apiBaseUrl={API_URL} />}
+          </details>
+        )}
         <section className="hero-card">
           <div>
             <StatusPill tone={isLegacy ? 'neutral' : 'success'}>
