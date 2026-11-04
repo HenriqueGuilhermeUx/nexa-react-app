@@ -277,9 +277,10 @@ function NexaAuth({onAuthenticated}) {
         <StatusPill tone="info">Cripto sem complicação</StatusPill>
         <h1>Sua wallet. Seus ativos.</h1>
         <p>
-          Use o mesmo acesso no site e no aplicativo. A tecnologia fica por
-          trás da experiência enquanto sua carteira permanece no centro.
+          Conheça a Nexa com tranquilidade: crie sua conta, confirme sua identidade e explore as funcionalidades disponíveis. Você não precisa fazer um depósito para começar a entender o produto.
         </p>
+        <p>Por segurança, faça sua identificação somente pelos links oficiais. A Nexa nunca pede sua senha ou códigos de acesso por WhatsApp.</p>
+        <p>Depois da aprovação, confira valores, custos e condições no aplicativo antes de usar Pix ou outros serviços disponíveis.</p>
       </section>
 
       <form className="auth-card" onSubmit={submit}>
@@ -304,7 +305,7 @@ function NexaAuth({onAuthenticated}) {
         <p className="muted">
           {mode === 'login'
             ? 'Acesse sua Nexa Wallet com o mesmo e-mail do aplicativo.'
-            : 'Sua wallet começa aqui. O mesmo acesso também funcionará no app.'}
+            : 'Comece pelo cadastro. A verificação de identidade ajuda a proteger sua conta; depois, você poderá conhecer as opções de depósito. O mesmo acesso funciona no app.'}
         </p>
 
         {mode === 'register' && (
