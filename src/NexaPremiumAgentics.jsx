@@ -121,6 +121,26 @@ export default function NexaPremiumAgentics({accessToken, apiBaseUrl}) {
         ? <ul>{report.observations.map((item, index) =>
           <li key={index}>{typeof item === 'string' ? item : String(item?.message || item?.text || item?.summary || 'Observação disponível')}</li>)}</ul>
         : <p>Não há observações disponíveis para esta consulta.</p>}
+      {Array.isArray(report.priorities) && report.priorities.length > 0 && <div aria-label="Pontos de atenção da Maya">
+        <h4>Pontos de atenção</h4>
+        <ul>{report.priorities.map((item,index)=><li key={index}><strong>{String(item.title || 'Atenção')}</strong>: {String(item.explanation || '')}</li>)}</ul>
+      </div>}
+      {report.transactionInsights?.status === 'available' && <div aria-label="Movimentações Nexa">
+        <h4>Movimentações Nexa</h4>
+        <p>Registros consultados: {report.transactionInsights.sampleSize} (máximo de 50).</p>
+        <p>Conversões BRL para USDC concluídas: {typeof report.transactionInsights.completedOnrampsBrl === 'number' ? report.transactionInsights.completedOnrampsBrl.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}) : 'indisponível'}.</p>
+        <p>Conversões USDC para BRL concluídas: {typeof report.transactionInsights.completedOfframpsBrl === 'number' ? report.transactionInsights.completedOfframpsBrl.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}) : 'indisponível'}.</p>
+        <p>Operações pendentes ou em processamento: {report.transactionInsights.pendingCount ?? 'indisponível'}.</p>
+        {report.transactionInsights.sampleLimitReached && <p>Limite de registros atingido: estes totais não representam necessariamente todo o histórico.</p>}
+        {report.transactionInsights.oldestRecordAt && report.transactionInsights.newestRecordAt && <p>Período observado: {new Date(report.transactionInsights.oldestRecordAt).toLocaleDateString('pt-BR')} a {new Date(report.transactionInsights.newestRecordAt).toLocaleDateString('pt-BR')}.</p>}
+        <p>Conversões não representam necessariamente receitas ou despesas pessoais.</p>
+      </div>}
+      {report.coverage && <div aria-label="Cobertura da análise">
+        <h4>Cobertura dos dados</h4>
+        <p>Ledger BRL: {report.coverage.brlLedger ? 'consultado' : 'indisponível'} · USDC operacional: {report.coverage.operationalUsdc ? 'consultado' : 'indisponível'} · Polygon: {report.coverage.polygonWallet ? 'consultada' : 'indisponível'}.</p>
+        <p>Histórico Nexa: {report.coverage.transactionHistory ? 'consultado' : 'indisponível'} · Bancos externos: {report.coverage.externalBanks ? 'conectados' : 'ainda não conectados nesta análise'}.</p>
+        {!report.coverage.spendingTrendsAvailable && <p>A Maya não calcula tendências de despesas sem histórico bancário verificado.</p>}
+      </div>}
       {report.evidence && <div aria-label="Fontes financeiras consultadas">
         <h4>Fontes consultadas separadamente</h4>
         <ul>
