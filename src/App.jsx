@@ -479,7 +479,7 @@ function Dashboard({session, user, profile, history, onRefresh, onLogout}) {
       <main className="portal-content">
         {import.meta.env.VITE_NEXA_AGENTICS_PREVIEW_ENABLED === 'true' && (
           <details className="hero-card" style={{marginBottom: 16}} onToggle={(event) => setConsultantOpen(event.currentTarget.open)}>
-            <summary>Maya · sua assistente inteligente (consultoria Premium)</summary>
+            <summary>Maya · Sua assistente inteligente</summary>
             {consultantOpen && <NexaPremiumAgentics accessToken={session?.accessToken} apiBaseUrl={API_URL} />}
           </details>
         )}
