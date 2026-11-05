@@ -1,5 +1,6 @@
 import InvestCreditPreview from './InvestCreditPreview.jsx';
 import NexaPremiumAgentics from './NexaPremiumAgentics.jsx';
+import NexaLifecycleCoach from './NexaLifecycleCoach.jsx';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
   useCreateWallet,
@@ -478,6 +479,10 @@ function Dashboard({session, user, profile, history, onRefresh, onLogout}) {
       </header>
 
       <main className="portal-content">
+        <details className="hero-card" style={{marginBottom:16}}>
+          <summary>Sua jornada Nexa · próximos passos</summary>
+          <NexaLifecycleCoach accessToken={session?.accessToken} apiBaseUrl={API_URL}/>
+        </details>
         {import.meta.env.VITE_NEXA_AGENTICS_PREVIEW_ENABLED === 'true' && (
           <details className="hero-card" style={{marginBottom: 16}} onToggle={(event) => setConsultantOpen(event.currentTarget.open)}>
             <summary>Maya · Sua assistente inteligente</summary>
