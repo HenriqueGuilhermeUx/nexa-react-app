@@ -198,6 +198,17 @@ export default function NexaLifecycleCoach({accessToken, apiBaseUrl}) {
           );
         })()}
 
+        {(snapshot.stage==='first_deposit' || snapshot.stage==='next_deposit') && (
+          <div style={{padding:14,border:'1px solid #64748b55',borderRadius:10,margin:'12px 0'}}>
+            <strong>{snapshot.stage==='first_deposit'
+              ? 'Conheça como fazer sua primeira entrada com Pix'
+              : 'Consulte as opções para uma nova entrada'}</strong>
+            <p>Confira a cotação, os custos e os riscos antes de decidir. Nenhuma operação será iniciada ou confirmada automaticamente.</p>
+            <a className="text-button" href="/wallet-v148.html?tab=deposit">
+              Abrir opções de adicionar com Pix
+            </a>
+          </div>
+        )}
         {snapshot.stage==='kyc' && (
           <div style={{padding:14,border:'1px solid #64748b55',borderRadius:10,margin:'12px 0'}}>
             <strong>Concluir identidade com segurança</strong>
