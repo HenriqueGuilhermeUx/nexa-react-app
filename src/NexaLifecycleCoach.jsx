@@ -89,6 +89,26 @@ export default function NexaLifecycleCoach({accessToken, apiBaseUrl}) {
       if(String(profile?.residenceCountry || 'BR').toUpperCase() !== 'BR') {
         throw new Error('Este fluxo é exclusivo para residentes no Brasil. Procure o suporte para outra jurisdição.');
       }
+      // Reuse an existing valid session instead of starting duplicate biometric sessions.
+      const currentRes = await fetch(apiBaseUrl+'/kyc/didit/me',{headers,cache:'no-store'});
+      if(currentRes.ok) {
+        const current = await currentRes.json();
+        if(current.kycStatus === 'approved') {
+          setKycFeedback('Sua verificação já foi aprovada.');
+          await load();
+          return;
+        }
+        if(current.manualReviewRequired) {
+          setKycFeedback('Existe uma revisão manual pendente. A equipe Nexa precisa orientar a continuidade.');
+          return;
+        }
+        const existingUrl = safeDiditUrl(current.verificationUrl);
+        const existingStatus = String(current.diditSessionStatus || '').toLowerCase();
+        if(existingUrl && !/(expired|failed|cancelled|canceled|rejected|completed)/.test(existingStatus)) {
+          window.location.assign(existingUrl);
+          return;
+        }
+      }
       const response = await fetch(apiBaseUrl+'/kyc/didit/brazil/start',{
         method:'POST',
         headers:{...headers,'Content-Type':'application/json'},
