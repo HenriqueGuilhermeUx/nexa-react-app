@@ -478,7 +478,7 @@ function Dashboard({session, user, profile, history, onRefresh, onLogout}) {
       </header>
 
       <main className="portal-content">
-        <details className="hero-card" style={{marginBottom:16}}>
+        <details className="hero-card" style={{marginBottom:16}} open>
           <summary>Sua jornada Nexa · próximos passos</summary>
           <NexaLifecycleCoach accessToken={session?.accessToken} apiBaseUrl={API_URL}/>
         </details>
