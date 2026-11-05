@@ -91,6 +91,7 @@ export default function NexaLifecycleCoach({accessToken, apiBaseUrl}) {
       }
       // Reuse an existing valid session instead of starting duplicate biometric sessions.
       const currentRes = await fetch(apiBaseUrl+'/kyc/didit/me',{headers,cache:'no-store'});
+      if(!currentRes.ok) throw new Error('Não foi possível verificar se já existe uma sessão Didit. Tente novamente antes de criar outra.');
       if(currentRes.ok) {
         const current = await currentRes.json();
         if(current.kycStatus === 'approved') {
