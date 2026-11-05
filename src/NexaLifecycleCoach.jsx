@@ -20,6 +20,19 @@ const STATUS = {
   recorded:'Registrado',
 };
 
+function safeDiditUrl(value) {
+  if (typeof value !== 'string') return null;
+  try {
+    const url = new URL(value);
+    const host = url.hostname.toLowerCase();
+    if (url.protocol !== 'https:' || !(
+      host === 'didit.me' || host.endsWith('.didit.me') ||
+      host === 'didit.io' || host.endsWith('.didit.io')
+    )) return null;
+    return url.href;
+  } catch { return null; }
+}
+
 function apiError(response) {
   if (response.status === 401) return 'Sua sessão expirou. Entre novamente na Nexa.';
   if (response.status === 403) return 'Sua conta não pode acessar este recurso no momento.';
@@ -31,6 +44,9 @@ export default function NexaLifecycleCoach({accessToken, apiBaseUrl}) {
   const [loading,setLoading] = useState(Boolean(accessToken));
   const [saving,setSaving] = useState(false);
   const [error,setError] = useState('');
+  const [kycConsent,setKycConsent] = useState(false);
+  const [kycBusy,setKycBusy] = useState(false);
+  const [kycFeedback,setKycFeedback] = useState('');
 
   const load = useCallback(async (signal) => {
     if (!accessToken) {setLoading(false);setSnapshot(null);return;}
@@ -57,6 +73,70 @@ export default function NexaLifecycleCoach({accessToken, apiBaseUrl}) {
     load(controller.signal);
     return ()=>controller.abort();
   },[load]);
+
+  const startKyc = async () => {
+    if (!accessToken || kycBusy) return;
+    if (!kycConsent) {
+      setKycFeedback('Confirme o consentimento explícito antes de iniciar.');
+      return;
+    }
+    setKycBusy(true); setKycFeedback('');
+    try {
+      const headers = {Authorization:'Bearer '+accessToken,Accept:'application/json'};
+      const profileRes = await fetch(apiBaseUrl+'/user/me',{headers,cache:'no-store'});
+      if(!profileRes.ok) throw new Error(apiError(profileRes));
+      const profile = await profileRes.json();
+      if(String(profile?.residenceCountry || 'BR').toUpperCase() !== 'BR') {
+        throw new Error('Este fluxo é exclusivo para residentes no Brasil. Procure o suporte para outra jurisdição.');
+      }
+      const response = await fetch(apiBaseUrl+'/kyc/didit/brazil/start',{
+        method:'POST',
+        headers:{...headers,'Content-Type':'application/json'},
+        body:JSON.stringify({consent:true}),
+      });
+      const result = await response.json().catch(()=>({}));
+      if(!response.ok) {
+        throw new Error(typeof result.message === 'string' ? result.message : apiError(response));
+      }
+      if(result.alreadyApproved) {
+        setKycFeedback('Sua identidade já está aprovada.');
+        await load();
+        return;
+      }
+      if(result.manualReviewRequired) {
+        setKycFeedback('Seu caso precisa de revisão humana; nenhuma nova sessão foi iniciada.');
+        return;
+      }
+      const url = safeDiditUrl(result.verificationUrl);
+      if(!url) throw new Error('A verificação não retornou um link oficial reconhecido. Procure o suporte.');
+      window.location.assign(url);
+    } catch (err) {
+      setKycFeedback(err?.message || 'Não foi possível iniciar a verificação agora.');
+    } finally {
+      setKycBusy(false);
+    }
+  };
+
+  const refreshKycStatus = async () => {
+    if (!accessToken || kycBusy) return;
+    setKycBusy(true); setKycFeedback('');
+    try {
+      const res = await fetch(apiBaseUrl+'/kyc/didit/me',{
+        headers:{Authorization:'Bearer '+accessToken,Accept:'application/json'},
+        cache:'no-store',
+      });
+      if(!res.ok) throw new Error(apiError(res));
+      const data=await res.json();
+      setKycFeedback(data.kycStatus==='approved'
+        ? 'Sua verificação foi aprovada.'
+        : 'Status consultado. Se permanecer em análise, aguarde orientação do provedor ou suporte.');
+      await load();
+    } catch(err) {
+      setKycFeedback(err?.message||'Não foi possível atualizar o status.');
+    } finally {
+      setKycBusy(false);
+    }
+  };
 
   const setEducationOptIn = async (nextValue) => {
     if (!accessToken || saving) return;
@@ -97,6 +177,26 @@ export default function NexaLifecycleCoach({accessToken, apiBaseUrl}) {
           );
         })()}
 
+        {snapshot.stage==='kyc' && (
+          <div style={{padding:14,border:'1px solid #64748b55',borderRadius:10,margin:'12px 0'}}>
+            <strong>Concluir identidade com segurança</strong>
+            <p>Seus documentos e dados biométricos são fornecidos no ambiente oficial de verificação da Didit, nunca pelo WhatsApp.</p>
+            <label style={{display:'flex',gap:8,alignItems:'flex-start'}}>
+              <input type="checkbox" checked={kycConsent} disabled={kycBusy}
+                onChange={event=>setKycConsent(event.target.checked)}/>
+              <span>Autorizo o início da verificação de identidade e biometria no provedor indicado pela Nexa.</span>
+            </label>
+            <button type="button" onClick={startKyc} disabled={kycBusy || !kycConsent}>
+              {kycBusy?'Iniciando…':'Iniciar verificação segura'}
+            </button>
+          </div>
+        )}
+        {(snapshot.stage==='kyc_review'||snapshot.stage==='kyc_assistance') && (
+          <button type="button" disabled={kycBusy} onClick={refreshKycStatus}>
+            {kycBusy?'Consultando…':'Atualizar situação do KYC'}
+          </button>
+        )}
+        {kycFeedback && <p role="status">{kycFeedback}</p>}
         <p><small>Orientações educativas, não recomendações de investimento. Toda operação exige sua própria decisão e confirmação.</small></p>
         <div className="grid" style={{margin:'14px 0'}}>
           {STAGES.map(([field,label])=><div key={field} style={{padding:12,border:'1px solid #64748b55',borderRadius:10}}>
