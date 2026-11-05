@@ -86,6 +86,17 @@ export default function NexaLifecycleCoach({accessToken, apiBaseUrl}) {
       {!loading && snapshot && <>
         <h3>{snapshot.nextAction.title}</h3>
         <p>{snapshot.nextAction.description}</p>
+        {(() => {
+          const destination = snapshot.nextAction?.destination;
+          if (typeof destination !== 'string' ||
+            !/^https:\/\/trynexa\.com\.br(?:\/|$)/.test(destination)) return null;
+          return (
+            <p><a className="text-button" href={destination}>
+              {snapshot.nextAction.actionLabel || 'Abrir Nexa'}
+            </a></p>
+          );
+        })()}
+
         <p><small>Orientações educativas, não recomendações de investimento. Toda operação exige sua própria decisão e confirmação.</small></p>
         <div className="grid" style={{margin:'14px 0'}}>
           {STAGES.map(([field,label])=><div key={field} style={{padding:12,border:'1px solid #64748b55',borderRadius:10}}>
