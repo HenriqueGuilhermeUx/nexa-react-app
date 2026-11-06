@@ -230,6 +230,19 @@ export default function NexaLifecycleCoach({accessToken, apiBaseUrl}) {
         )}
         {kycFeedback && <p role="status">{kycFeedback}</p>}
         <p><small>Orientações educativas, não recomendações de investimento. Toda operação exige sua própria decisão e confirmação.</small></p>
+        <div style={{padding:12,border:'1px solid #64748b55',borderRadius:10}}>
+          <strong>Orientações por e-mail: você escolhe</strong>
+          <p>Quer receber ajuda com a verificação, Pix e a conta Nexa? Enviaremos no máximo um e-mail educativo por semana, somente com sua autorização. Sem mensagens comerciais por WhatsApp. Cancele quando quiser.</p>
+          <label style={{display:'flex',gap:8,alignItems:'center',cursor:'pointer'}}>
+            <input type="checkbox"
+              checked={Boolean(snapshot.educationalEmail?.optedIn)}
+              disabled={saving}
+              onChange={(event)=>setEducationOptIn(event.target.checked)}/>
+            {snapshot.educationalEmail?.optedIn?'Receber orientações educativas por e-mail':'Sim, quero receber orientações educativas por e-mail'}
+          </label>
+          {!snapshot.educationalEmail?.deliveryEnabled &&
+            <p><small>O envio automático ainda não está ativo. Sua preferência será registrada antes de habilitarmos os comunicados.</small></p>}
+        </div>
         <div className="grid" style={{margin:'14px 0'}}>
           {STAGES.map(([field,label])=><div key={field} style={{padding:12,border:'1px solid #64748b55',borderRadius:10}}>
             <strong>{label}</strong>
@@ -246,19 +259,7 @@ export default function NexaLifecycleCoach({accessToken, apiBaseUrl}) {
             </li>
           ))}
         </ul>
-        <div style={{padding:12,border:'1px solid #64748b55',borderRadius:10}}>
-          <strong>Conteúdo educativo semanal por e-mail</strong>
-          <p>Opcional. Sem promessas de lucro, recomendações de compra ou mensagens de WhatsApp. Você pode cancelar a qualquer momento.</p>
-          <label style={{display:'flex',gap:8,alignItems:'center',cursor:'pointer'}}>
-            <input type="checkbox"
-              checked={Boolean(snapshot.educationalEmail?.optedIn)}
-              disabled={saving}
-              onChange={(event)=>setEducationOptIn(event.target.checked)}/>
-            {snapshot.educationalEmail?.optedIn?'Quero receber conteúdo educativo':'Aceito receber conteúdo educativo por e-mail'}
-          </label>
-          {!snapshot.educationalEmail?.deliveryEnabled &&
-            <p><small>O envio automático ainda não está ativo. Sua preferência será registrada antes de habilitarmos os comunicados.</small></p>}
-        </div>
+
       </>}
     </section>
   );
