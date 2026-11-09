@@ -30,6 +30,10 @@ requireText(app, 'getAccessToken()', 'obtenção do access token Privy');
 requireText(app, 'useCreateWallet', 'criação manual de embedded wallet no login whitelabel');
 requireText(app, 'createWallet()', 'execução de criação da embedded wallet');
 requireText(app, "settlementProfile === 'direct_settlement'", 'separação de perfil direct settlement');
+requireText(app, "showKycFirst={['pending','in_review','rejected'].includes", 'KYC-first on wallet activation for pending users');
+requireText(app, '<NexaLifecycleCoach accessToken={accessToken} apiBaseUrl={API_URL}/>', 'KYC journey accessible before wallet OTP');
+requireText(app, 'Você não precisa concluir a ativação da carteira antes de verificar sua identidade.', 'clear onboarding guidance');
+
 requireText(app, 'isLegacyBeta', 'preservação do fluxo Beta/Legado');
 requireText(app, 'PRIVY_EMAIL', 'mensagem/código de proteção de e-mail do backend não é obrigatório no cliente');
 
