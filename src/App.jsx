@@ -383,6 +383,8 @@ function NexaAuth({onAuthenticated}) {
 }
 
 function WalletActivation({
+  accessToken,
+  showKycFirst,
   email,
   code,
   setCode,
@@ -394,12 +396,21 @@ function WalletActivation({
   emailMismatch,
 }) {
   return (
-    <main className="center-page">
+    <main className="center-page" style={{display:'flex',flexDirection:'column',gap:16,padding:'24px 14px'}}>
+      {showKycFirst && accessToken && (
+        <section className="activation-card" style={{width:'100%',maxWidth:720}}>
+          <StatusPill tone="info">Primeiro passo · Identidade</StatusPill>
+          <h1>Conclua sua verificação para avançar</h1>
+          <p>Seu cadastro foi criado. Para usar sua conta com segurança, inicie a verificação pela Didit. Você não precisa concluir a ativação da carteira antes de verificar sua identidade.</p>
+          <NexaLifecycleCoach accessToken={accessToken} apiBaseUrl={API_URL}/>
+        </section>
+      )}
       <section className="activation-card">
         <div className="progress-ring">N</div>
-        <StatusPill tone="info">Proteção da conta</StatusPill>
+        <StatusPill tone="info">{showKycFirst?'Próximo passo · Carteira':'Proteção da conta'}</StatusPill>
         <h1>Estamos preparando sua carteira</h1>
         <p>
+          {showKycFirst ? 'Depois de verificar sua identidade, ' : ''}
           Enviamos um código para <strong>{email}</strong>. Essa confirmação
           acontece apenas na primeira ativação deste navegador.
         </p>
@@ -1175,6 +1186,8 @@ export default function App() {
   if (needsWallet) {
     return (
       <WalletActivation
+        accessToken={session.accessToken}
+        showKycFirst={['pending','in_review','rejected'].includes(String(user?.kycStatus || '').toLowerCase())}
         email={nexaEmail}
         code={code}
         setCode={setCode}
