@@ -7,6 +7,8 @@ const app = read('src/App.jsx');
 const redemption = read('src/RedemptionHistory.jsx');
 const redemptionPortal = read('src/RedemptionPortal.jsx');
 const styles = read('src/styles.css');
+const coach = read('src/NexaLifecycleCoach.jsx');
+const kycRecovery = read('src/kyc-stage-fallback.mjs');
 const main = read('src/main.jsx');
 const pkg = JSON.parse(read('package.json'));
 
@@ -31,6 +33,11 @@ requireText(app, 'useCreateWallet', 'criação manual de embedded wallet no logi
 requireText(app, 'createWallet()', 'execução de criação da embedded wallet');
 requireText(app, "settlementProfile === 'direct_settlement'", 'separação de perfil direct settlement');
 requireText(app, "showKycFirst={['pending','in_review','rejected'].includes", 'KYC-first on wallet activation for pending users');
+requireText(coach, "kycRecoverySnapshot(await kycRes.json())", 'fallback reads authenticated Didit status without starting a session');
+requireText(coach, "if (![401,403].includes(err?.httpStatus))", 'authentication failure cannot fall back');
+requireText(coach, "if (!kycConsent)", 'biometric consent always required');
+requireText(kycRecovery, "if (!['pending', 'in_review', 'rejected'].includes(status)) return null", 'KYC fallback restricted to pending or review states');
+rejectText(kycRecovery, '/deposit', 'fallback cannot initiate deposits');
 requireText(app, '<NexaLifecycleCoach accessToken={accessToken} apiBaseUrl={API_URL}/>', 'KYC journey accessible before wallet OTP');
 requireText(app, 'Você não precisa concluir a ativação da carteira antes de verificar sua identidade.', 'clear onboarding guidance');
 
