@@ -11,7 +11,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "validate:contract": "node scripts/validate-privy-web.mjs",
-    "check": "npm run validate:contract && npm run build"
+    "check": "npm run validate:contract && npm run test:kyc-recovery && npm run build",
+    "test:kyc-recovery": "node --test test/kyc-stage-fallback.test.mjs"
   },
   "dependencies": {
     "@privy-io/react-auth": "3.35.2",
