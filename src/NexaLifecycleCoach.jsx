@@ -1,4 +1,5 @@
 import {useCallback, useEffect, useState} from 'react';
+import {kycRecoverySnapshot} from './kyc-stage-fallback.mjs';
 
 const STAGES = [
   ['identity','Identidade'], ['firstRecordedFunding','Primeira entrada registrada'],
@@ -50,19 +51,45 @@ export default function NexaLifecycleCoach({accessToken, apiBaseUrl}) {
 
   const load = useCallback(async (signal) => {
     if (!accessToken) {setLoading(false);setSnapshot(null);return;}
-    setLoading(true);setError('');
+    setLoading(true);setError('');setSnapshot(null);
     try {
       const response = await fetch(apiBaseUrl + '/lifecycle/me', {
         headers:{Authorization:'Bearer ' + accessToken,Accept:'application/json'},
         cache:'no-store',
         signal,
       });
-      if (!response.ok) throw new Error(apiError(response));
+      if (!response.ok) {
+        const issue = new Error(apiError(response));
+        issue.httpStatus = response.status;
+        throw issue;
+      }
       const body = await response.json();
       if (!body?.success || !body?.nextAction) throw new Error('Jornada temporariamente indisponível.');
       setSnapshot(body);
     } catch (err) {
-      if (err?.name !== 'AbortError') setError(err?.message || 'Falha ao consultar jornada.');
+      if (err?.name === 'AbortError') return;
+      // /lifecycle/me is an optional overview. If it is unavailable,
+      // /kyc/didit/me can independently recover only the authenticated
+      // verification step. Never fall back on 401/403 authentication failure.
+      if (![401,403].includes(err?.httpStatus)) {
+        try {
+          const kycRes = await fetch(apiBaseUrl + '/kyc/didit/me', {
+            headers:{Authorization:'Bearer ' + accessToken,Accept:'application/json'},
+            cache:'no-store',signal,
+          });
+          if (kycRes.ok) {
+            const recovery = kycRecoverySnapshot(await kycRes.json());
+            if (recovery && !signal?.aborted) {
+              setSnapshot(recovery);
+              setError('Não conseguimos mostrar a jornada completa, mas sua verificação continua disponível.');
+              return;
+            }
+          }
+        } catch (fallbackErr) {
+          if (fallbackErr?.name === 'AbortError') return;
+        }
+      }
+      if (!signal?.aborted) setError(err?.message || 'Falha ao consultar jornada.');
     } finally {
       if (!signal?.aborted) setLoading(false);
     }
@@ -221,6 +248,8 @@ export default function NexaLifecycleCoach({accessToken, apiBaseUrl}) {
             <button type="button" onClick={startKyc} disabled={kycBusy || !kycConsent}>
               {kycBusy?'Iniciando…':'Iniciar verificação segura'}
             </button>
+            <p style={{marginTop:10}}><small>A verificação não exige depósito. Seus dados são enviados à Didit somente após sua autorização.</small></p>
+            <p><small>Precisa de ajuda? <a href="https://t.me/NexaTheoBot" target="_blank" rel="noopener noreferrer">Fale com Theo no Telegram</a>, sem enviar documentos, senhas ou códigos.</small></p>
           </div>
         )}
         {(snapshot.stage==='kyc_review'||snapshot.stage==='kyc_assistance') && (
@@ -230,7 +259,7 @@ export default function NexaLifecycleCoach({accessToken, apiBaseUrl}) {
         )}
         {kycFeedback && <p role="status">{kycFeedback}</p>}
         <p><small>Orientações educativas, não recomendações de investimento. Toda operação exige sua própria decisão e confirmação.</small></p>
-        <div style={{padding:12,border:'1px solid #64748b55',borderRadius:10}}>
+        {!snapshot.recoveryOnly && <div style={{padding:12,border:'1px solid #64748b55',borderRadius:10}}>
           <strong>Orientações por e-mail: você escolhe</strong>
           <p>Quer receber ajuda com a verificação, Pix e a conta Nexa? Enviaremos no máximo um e-mail educativo por semana, somente com sua autorização. Sem mensagens comerciais por WhatsApp. Cancele quando quiser.</p>
           <label style={{display:'flex',gap:8,alignItems:'center',cursor:'pointer'}}>
@@ -242,7 +271,7 @@ export default function NexaLifecycleCoach({accessToken, apiBaseUrl}) {
           </label>
           {!snapshot.educationalEmail?.deliveryEnabled &&
             <p><small>O envio automático ainda não está ativo. Sua preferência será registrada antes de habilitarmos os comunicados.</small></p>}
-        </div>
+        </div>}
         <div className="grid" style={{margin:'14px 0'}}>
           {STAGES.map(([field,label])=><div key={field} style={{padding:12,border:'1px solid #64748b55',borderRadius:10}}>
             <strong>{label}</strong>
