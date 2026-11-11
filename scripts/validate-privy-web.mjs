@@ -9,6 +9,7 @@ const redemptionPortal = read('src/RedemptionPortal.jsx');
 const styles = read('src/styles.css');
 const coach = read('src/NexaLifecycleCoach.jsx');
 const kycRecovery = read('src/kyc-stage-fallback.mjs');
+const walletKycGate = read('src/kyc-wallet-gate.mjs');
 const main = read('src/main.jsx');
 const pkg = JSON.parse(read('package.json'));
 
@@ -34,6 +35,15 @@ requireText(app, 'createWallet()', 'execução de criação da embedded wallet')
 requireText(app, "settlementProfile === 'direct_settlement'", 'separação de perfil direct settlement');
 requireText(app, "showKycFirst={['pending','in_review','rejected'].includes", 'KYC-first on wallet activation for pending users');
 requireText(coach, "kycRecoverySnapshot(await kycRes.json())", 'fallback reads authenticated Didit status without starting a session');
+requireText(app, "const meData = await apiFetch('/user/me', token);", 'account verification before wallet profile load');
+requireText(app, "if (!nextUser?.id)", 'validated user id requirement');
+requireText(app, "setAccountVerified(true);", 'authenticated profile state');
+requireText(app, "shouldOfferKycWithoutWallet({", 'fallback KYC gating when wallet unavailable');
+requireText(app, "if (!profile) {", 'wallet-unavailable support and KYC screen');
+requireText(app, "<NexaLifecycleCoach accessToken={session.accessToken} apiBaseUrl={API_URL}/>", 'authenticated KYC before wallet profile');
+requireText(walletKycGate, "walletProfileState !== 'unavailable'", 'only wallet failure allows recovery');
+requireText(walletKycGate, "accountVerified !== true", 'no KYC fallback for unverified account');
+rejectText(app, "const [meData, profileData] = await Promise.all([", 'user authentication cannot depend on wallet profile');
 requireText(coach, "if (![401,403].includes(err?.httpStatus))", 'authentication failure cannot fall back');
 requireText(coach, "if (!kycConsent)", 'biometric consent always required');
 requireText(kycRecovery, "if (!['pending', 'in_review', 'rejected'].includes(status)) return null", 'KYC fallback restricted to pending or review states');
