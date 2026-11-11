@@ -1,6 +1,7 @@
 import InvestCreditPreview from './InvestCreditPreview.jsx';
 import NexaPremiumAgentics from './NexaPremiumAgentics.jsx';
 import NexaLifecycleCoach from './NexaLifecycleCoach.jsx';
+import {shouldOfferKycWithoutWallet} from './kyc-wallet-gate.mjs';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
   useCreateWallet,
@@ -869,6 +870,8 @@ export default function App() {
   });
   const [user, setUser] = useState(() => readStoredUser());
   const [profile, setProfile] = useState(null);
+  const [accountVerified, setAccountVerified] = useState(false);
+  const [walletProfileState, setWalletProfileState] = useState('not_checked');
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(Boolean(readAccessToken()));
   const [message, setMessage] = useState('');
@@ -895,23 +898,54 @@ export default function App() {
       setSession(null);
       setUser(null);
       setProfile(null);
+      setAccountVerified(false);
+      setWalletProfileState('not_checked');
       setLoading(false);
       return;
     }
 
     setLoading(true);
+    setAccountVerified(false);
+    setWalletProfileState('checking');
     try {
-      const [meData, profileData] = await Promise.all([
-        apiFetch('/user/me', token),
-        apiFetch('/direct-settlement/profile', token),
-      ]);
+      // User authentication is independent of the financial wallet profile.
+      // A wallet infrastructure error must never prevent an authenticated
+      // account from beginning identity verification.
+      const meData = await apiFetch('/user/me', token);
       const nextUser = meData?.user || meData;
-      const nextProfile = profileData?.profile || profileData;
+      if (!nextUser?.id) {
+        throw new Error('Não foi possível confirmar sua conta Nexa. Tente entrar novamente.');
+      }
       setSession({accessToken: token, user: nextUser});
       setUser(nextUser);
-      setProfile(nextProfile);
+      setAccountVerified(true);
       localStorage.setItem('nexa_user', JSON.stringify(nextUser));
 
+      let nextProfile = null;
+      try {
+        const profileData = await apiFetch('/direct-settlement/profile', token);
+        nextProfile = profileData?.profile || profileData;
+      } catch {
+        // Never manufacture a wallet profile or grant financial permissions.
+        // Only /user/me-authenticated accounts with unfinished KYC can
+        // continue to the recovery screen.
+        setProfile(null);
+        setHistory([]);
+        setWalletProfileState('unavailable');
+        setMessage('Não foi possível carregar a carteira. A verificação de identidade pode continuar separadamente.');
+        return;
+      }
+      if (!nextProfile || typeof nextProfile !== 'object') {
+        setProfile(null);
+        setHistory([]);
+        setWalletProfileState('unavailable');
+        setMessage('O perfil da carteira está indisponível. Você pode tentar novamente.');
+        return;
+      }
+
+      setProfile(nextProfile);
+      setWalletProfileState('available');
+      setMessage('');
       try {
         const historyData = await apiFetch('/transaction/history', token);
         const list =
@@ -924,11 +958,14 @@ export default function App() {
         setHistory([]);
       }
     } catch (error) {
+      setProfile(null);
+      setHistory([]);
+      setAccountVerified(false);
+      setWalletProfileState('unavailable');
       if (error.status === 401) {
         clearNexaSession();
         setSession(null);
         setUser(null);
-        setProfile(null);
       } else {
         setMessage(error.message);
       }
@@ -1134,6 +1171,8 @@ export default function App() {
     setUser(null);
     setProfile(null);
     setHistory([]);
+    setAccountVerified(false);
+    setWalletProfileState('not_checked');
     setCode('');
     setOtpState('idle');
     creatingWalletRef.current = false;
@@ -1154,13 +1193,38 @@ export default function App() {
     );
   }
 
-  if (loading || !profile) {
+  if (loading) {
     return (
       <main className="center-page">
         <section className="activation-card compact">
           <div className="progress-ring">N</div>
           <h1>Preparando sua Nexa…</h1>
           <p>{message || 'Carregando sua conta com segurança.'}</p>
+        </section>
+      </main>
+    );
+  }
+
+  if (!profile) {
+    const canContinueKyc = shouldOfferKycWithoutWallet({
+      accountVerified, walletProfileState, kycStatus: user?.kycStatus,
+    });
+    return (
+      <main className="center-page" style={{padding:'24px 14px'}}>
+        <section className="activation-card" style={{width:'100%',maxWidth:720}}>
+          <StatusPill tone="info">{canContinueKyc ? 'Primeiro passo · Identidade' : 'Conta Nexa'}</StatusPill>
+          <h1>{canContinueKyc ? 'Você já pode verificar sua identidade' : 'Não foi possível carregar sua conta completa'}</h1>
+          <p>{message || 'Algumas informações estão temporariamente indisponíveis.'}</p>
+          {canContinueKyc ? (
+            <>
+              <p>A ativação da carteira e os depósitos não são necessários para começar a verificação segura.</p>
+              <NexaLifecycleCoach accessToken={session.accessToken} apiBaseUrl={API_URL}/>
+            </>
+          ) : (
+            <p>Não é possível liberar operações financeiras sem confirmar o perfil da carteira.</p>
+          )}
+          <button type="button" className="secondary-button" onClick={loadContext}>Tentar carregar novamente</button>
+          <button type="button" className="text-button" onClick={logoutAll}>Sair da conta</button>
         </section>
       </main>
     );
