@@ -1,5 +1,6 @@
 import {useCallback, useEffect, useState} from 'react';
 import {kycRecoverySnapshot} from './kyc-stage-fallback.mjs';
+import {prepareBrazilDiditStart} from './kyc-start-contract.mjs';
 
 const STAGES = [
   ['identity','Identidade'], ['firstRecordedFunding','Primeira entrada registrada'],
@@ -20,19 +21,6 @@ const STATUS = {
   cancelled:'Cancelado',
   recorded:'Registrado',
 };
-
-function safeDiditUrl(value) {
-  if (typeof value !== 'string') return null;
-  try {
-    const url = new URL(value);
-    const host = url.hostname.toLowerCase();
-    if (url.protocol !== 'https:' || !(
-      host === 'didit.me' || host.endsWith('.didit.me') ||
-      host === 'didit.io' || host.endsWith('.didit.io')
-    )) return null;
-    return url.href;
-  } catch { return null; }
-}
 
 function apiError(response) {
   if (response.status === 401) return 'Sua sessão expirou. Entre novamente na Nexa.';
@@ -107,57 +95,21 @@ export default function NexaLifecycleCoach({accessToken, apiBaseUrl}) {
       setKycFeedback('Confirme o consentimento explícito antes de iniciar.');
       return;
     }
-    setKycBusy(true); setKycFeedback('');
+    setKycBusy(true);setKycFeedback('');
     try {
-      const headers = {Authorization:'Bearer '+accessToken,Accept:'application/json'};
-      const profileRes = await fetch(apiBaseUrl+'/user/me',{headers,cache:'no-store'});
-      if(!profileRes.ok) throw new Error(apiError(profileRes));
-      const profile = await profileRes.json();
-      if(String(profile?.residenceCountry || 'BR').toUpperCase() !== 'BR') {
-        throw new Error('Este fluxo é exclusivo para residentes no Brasil. Procure o suporte para outra jurisdição.');
-      }
-      // Reuse an existing valid session instead of starting duplicate biometric sessions.
-      const currentRes = await fetch(apiBaseUrl+'/kyc/didit/me',{headers,cache:'no-store'});
-      if(!currentRes.ok) throw new Error('Não foi possível verificar se já existe uma sessão Didit. Tente novamente antes de criar outra.');
-      if(currentRes.ok) {
-        const current = await currentRes.json();
-        if(current.kycStatus === 'approved') {
-          setKycFeedback('Sua verificação já foi aprovada.');
-          await load();
-          return;
-        }
-        if(current.manualReviewRequired) {
-          setKycFeedback('Existe uma revisão manual pendente. A equipe Nexa precisa orientar a continuidade.');
-          return;
-        }
-        const existingUrl = safeDiditUrl(current.verificationUrl);
-        const existingStatus = String(current.diditSessionStatus || '').toLowerCase();
-        if(existingUrl && !/(expired|failed|cancelled|canceled|rejected|completed)/.test(existingStatus)) {
-          window.location.assign(existingUrl);
-          return;
-        }
-      }
-      const response = await fetch(apiBaseUrl+'/kyc/didit/brazil/start',{
-        method:'POST',
-        headers:{...headers,'Content-Type':'application/json'},
-        body:JSON.stringify({consent:true}),
+      // This function is unit-tested using injected fake requests.
+      // It never initiates KYC without the user's explicit checkbox + click.
+      const outcome = await prepareBrazilDiditStart({
+        accessToken,apiBaseUrl,consent:kycConsent,fetchImpl:fetch,
       });
-      const result = await response.json().catch(()=>({}));
-      if(!response.ok) {
-        throw new Error(typeof result.message === 'string' ? result.message : apiError(response));
-      }
-      if(result.alreadyApproved) {
-        setKycFeedback('Sua identidade já está aprovada.');
-        await load();
+      if (outcome.kind === 'redirect') {
+        window.location.assign(outcome.url);
         return;
       }
-      if(result.manualReviewRequired) {
-        setKycFeedback('Seu caso precisa de revisão humana; nenhuma nova sessão foi iniciada.');
-        return;
+      if (outcome.kind === 'approved' || outcome.kind === 'manual_review') {
+        setKycFeedback(outcome.message);
+        if (outcome.kind === 'approved') await load();
       }
-      const url = safeDiditUrl(result.verificationUrl);
-      if(!url) throw new Error('A verificação não retornou um link oficial reconhecido. Procure o suporte.');
-      window.location.assign(url);
     } catch (err) {
       setKycFeedback(err?.message || 'Não foi possível iniciar a verificação agora.');
     } finally {
