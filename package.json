@@ -11,9 +11,10 @@
     "build": "vite build",
     "preview": "vite preview",
     "validate:contract": "node scripts/validate-privy-web.mjs",
-    "check": "npm run validate:contract && npm run test:kyc-recovery && npm run test:kyc-wallet-gate && npm run build",
+    "check": "npm run validate:contract && npm run test:kyc-recovery && npm run test:kyc-wallet-gate && npm run test:kyc-start-contract && npm run build",
     "test:kyc-recovery": "node --test test/kyc-stage-fallback.test.mjs",
-    "test:kyc-wallet-gate": "node --test test/kyc-wallet-gate.test.mjs"
+    "test:kyc-wallet-gate": "node --test test/kyc-wallet-gate.test.mjs",
+    "test:kyc-start-contract": "node --test test/kyc-start-contract.test.mjs"
   },
   "dependencies": {
     "@privy-io/react-auth": "3.35.2",
