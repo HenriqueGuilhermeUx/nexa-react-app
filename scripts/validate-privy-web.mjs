@@ -10,6 +10,7 @@ const styles = read('src/styles.css');
 const coach = read('src/NexaLifecycleCoach.jsx');
 const kycRecovery = read('src/kyc-stage-fallback.mjs');
 const walletKycGate = read('src/kyc-wallet-gate.mjs');
+const kycStart = read('src/kyc-start-contract.mjs');
 const main = read('src/main.jsx');
 const pkg = JSON.parse(read('package.json'));
 
@@ -46,6 +47,13 @@ requireText(walletKycGate, "accountVerified !== true", 'no KYC fallback for unve
 rejectText(app, "const [meData, profileData] = await Promise.all([", 'user authentication cannot depend on wallet profile');
 requireText(coach, "if (![401,403].includes(err?.httpStatus))", 'authentication failure cannot fall back');
 requireText(coach, "if (!kycConsent)", 'biometric consent always required');
+requireText(coach, 'prepareBrazilDiditStart({', 'tested Didit user-initiated start in onboarding');
+requireText(kycStart, "method:'POST'", 'Didit session start explicitly POST');
+requireText(kycStart, 'body:JSON.stringify({consent:true})', 'explicit consent sent for Didit');
+requireText(kycStart, 'trustedDiditUrl(result.verificationUrl)', 'provider URL allowlist before navigation');
+requireText(kycStart, 'if (approved(current.kycStatus))', 'approved KYC never starts a second session');
+requireText(kycStart, 'current.manualReviewRequired === true', 'manual review prevents session');
+rejectText(coach, "safeDiditUrl(", 'single tested Didit URL verifier');
 requireText(kycRecovery, "if (!['pending', 'in_review', 'rejected'].includes(status)) return null", 'KYC fallback restricted to pending or review states');
 rejectText(kycRecovery, '/deposit', 'fallback cannot initiate deposits');
 requireText(app, '<NexaLifecycleCoach accessToken={accessToken} apiBaseUrl={API_URL}/>', 'KYC journey accessible before wallet OTP');
