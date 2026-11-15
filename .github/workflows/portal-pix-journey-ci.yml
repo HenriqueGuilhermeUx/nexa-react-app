@@ -38,6 +38,8 @@ jobs:
             git show 0f0c462034c9e6f3ab8bbee4b6eceab4ca4e911e:"$path" | cmp - "$path"
           done
       - run: npm install --no-audit --no-fund
+      - name: Load pinned Privy optional build-only peers used by Nexa Site
+        run: npm install --no-save --no-package-lock --no-audit --no-fund @solana-program/system@0.8.0 @solana-program/memo@0.8.0 @solana-program/token@0.6.0
       - run: npm run check
       - name: Verify built portal has no private data, payment bypass or foreign endpoints
         run: |
