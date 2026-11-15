@@ -1,0 +1,47 @@
+name: Nexa portal Pix journey safety CI
+on:
+  push:
+    branches:
+      - feat/nexa-portal-first-pix-journey-20261114
+  pull_request:
+    paths:
+      - 'src/NexaFirstPixJourney.jsx'
+      - 'src/App.jsx'
+      - 'package.json'
+      - 'test/first-pix-journey.test.mjs'
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      VITE_API_URL: https://nexa-backend-p2u0.onrender.com/api/v1
+      VITE_PRIVY_APP_ID: cmpen2gm3007v0cjswjlyefji
+      VITE_PRIVY_CLIENT_ID: client-web-ci-placeholder
+      VITE_BASE_PATH: /portal/
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.19.4
+      - name: Verify only approved portal delta from deployed source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --name-only 0f0c462034c9e6f3ab8bbee4b6eceab4ca4e911e...HEAD | sort > /tmp/changed
+          printf '.github/workflows/portal-pix-journey-ci.yml\npackage.json\nsrc/App.jsx\nsrc/NexaFirstPixJourney.jsx\ntest/first-pix-journey.test.mjs\n' | sort > /tmp/allowed
+          diff -u /tmp/allowed /tmp/changed
+          for path in src/kyc-start-contract.mjs src/kyc-stage-fallback.mjs src/NexaLifecycleCoach.jsx src/kyc-wallet-gate.mjs; do
+            git show 0f0c462034c9e6f3ab8bbee4b6eceab4ca4e911e:"$path" | cmp - "$path"
+          done
+      - run: npm install --no-audit --no-fund
+      - run: npm run check
+      - name: Verify built portal has no private data, payment bypass or foreign endpoints
+        run: |
+          test -s dist/index.html
+          ! grep -R -E "PRIVY_APP_SECRET|PRIVY_SECRET_KEY|/user/link-privy-wallet|pix_paid|usdc_delivered" dist
+          grep -R -q 'deposit-journey/event' dist
+          grep -R -q 'direct-settlement/wallet/link' dist
