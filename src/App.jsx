@@ -1,6 +1,7 @@
 import InvestCreditPreview from './InvestCreditPreview.jsx';
 import NexaPremiumAgentics from './NexaPremiumAgentics.jsx';
 import NexaLifecycleCoach from './NexaLifecycleCoach.jsx';
+import NexaFirstPixJourney from './NexaFirstPixJourney.jsx';
 import {shouldOfferKycWithoutWallet} from './kyc-wallet-gate.mjs';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
@@ -517,6 +518,9 @@ function Dashboard({session, user, profile, history, onRefresh, onLogout}) {
             <small>{wallet.network || user?.walletNetwork || 'Polygon'}</small>
           </div>
         </section>
+
+        <NexaFirstPixJourney accessToken={session.accessToken}
+          apiBaseUrl={API_URL} kycStatus={user?.kycStatus} />
 
         <section className="metric-grid">
           <article className="metric-card">
