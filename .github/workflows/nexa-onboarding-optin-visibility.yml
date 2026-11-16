@@ -1,0 +1,40 @@
+name: Nexa portal onboarding & opt-in visibility
+on:
+  push:
+    branches: [feat/nexa-portal-show-onboarding-journey-optin-20261116]
+  pull_request:
+    paths:
+      - src/App.jsx
+      - .github/workflows/nexa-onboarding-optin-visibility.yml
+permissions:
+  contents: read
+jobs:
+  ui-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Ensure all other frontend modules are unchanged
+        run: |
+          node - <<'NODE'
+          const cp=require('node:child_process'),assert=require('node:assert/strict'),fs=require('node:fs');
+          const files=cp.execFileSync('git',['diff','--name-only','origin/main...HEAD'],{encoding:'utf8'}).trim().split('\n').filter(Boolean);
+          assert.deepEqual(files.filter(f=>!['src/App.jsx','.github/workflows/nexa-onboarding-optin-visibility.yml'].includes(f)),[]);
+          const ui=fs.readFileSync('src/App.jsx','utf8');
+          assert(ui.includes('<details open className="hero-card"'));
+          assert(ui.includes('<NexaLifecycleCoach accessToken={session?.accessToken} apiBaseUrl={API_URL}/>'));
+          const coach=fs.readFileSync('src/NexaLifecycleCoach.jsx','utf8');
+          assert(coach.includes("educationalEmailOptIn:nextValue"));
+          assert(coach.includes("onChange={(event)=>setEducationOptIn(event.target.checked)}"));
+          NODE
+      - run: npm ci --no-audit --no-fund
+      - name: Validate existing Privy and all web content
+        run: npm run check
+      - name: No automated email or user consent change
+        run: echo 'UI only: opt-in remains off until explicit action, no background campaign sends'
