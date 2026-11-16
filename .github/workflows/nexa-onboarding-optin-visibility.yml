@@ -19,7 +19,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: npm
       - name: Ensure all other frontend modules are unchanged
         run: |
           node - <<'NODE'
@@ -33,7 +32,7 @@ jobs:
           assert(coach.includes("educationalEmailOptIn:nextValue"));
           assert(coach.includes("onChange={(event)=>setEducationOptIn(event.target.checked)}"));
           NODE
-      - run: npm ci --no-audit --no-fund
+      - run: npm install --no-audit --no-fund
       - name: Validate existing Privy and all web content
         run: npm run check
       - name: No automated email or user consent change
