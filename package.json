@@ -16,7 +16,9 @@
   "dependencies": {
     "@privy-io/react-auth": "3.35.2",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "@solana-program/system": "0.8.0",
+    "@solana-program/token": "0.6.0"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "6.0.4",

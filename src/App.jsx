@@ -479,8 +479,9 @@ function Dashboard({session, user, profile, history, onRefresh, onLogout}) {
       </header>
 
       <main className="portal-content">
-        <details className="hero-card" style={{marginBottom:16}}>
-          <summary>Sua jornada Nexa · próximos passos</summary>
+        <details open className="hero-card" style={{marginBottom:16}}>
+          <summary>Sua jornada Nexa · próximos passos e mensagens educativas</summary>
+          <p style={{fontSize:13,opacity:0.85}}>Comece pela verificação de identidade, acompanhe suas etapas e escolha se deseja receber orientações por e-mail. A autorização é opcional.</p>
           <NexaLifecycleCoach accessToken={session?.accessToken} apiBaseUrl={API_URL}/>
         </details>
         {import.meta.env.VITE_NEXA_AGENTICS_PREVIEW_ENABLED === 'true' && (
