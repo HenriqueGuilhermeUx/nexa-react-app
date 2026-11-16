@@ -190,7 +190,10 @@ export default function NexaLifecycleCoach({accessToken, apiBaseUrl}) {
         )}
         {snapshot.stage==='kyc' && (
           <div style={{padding:14,border:'1px solid #64748b55',borderRadius:10,margin:'12px 0'}}>
-            <strong>Concluir identidade com segurança</strong>
+            <strong>Faça a verificação facial preferencialmente no celular</strong>
+            <p>Use um celular com câmera, boa iluminação e seu documento. A captura e a verificação biométrica acontecem no ambiente oficial da Didit, após sua autorização.</p>
+            <p>Se você começou no computador, abra <a href="https://trynexa.com.br/portal/" target="_blank" rel="noopener noreferrer">trynexa.com.br/portal/</a> no celular e entre na mesma conta Nexa. Depois escolha <strong>Iniciar verificação segura</strong>. Não envie links com sessão, fotos de documentos, códigos ou senhas a terceiros.</p>
+            <p>Também é possível continuar neste dispositivo quando houver câmera compatível. Não é necessário depositar antes do KYC.</p>
             <p>Seus documentos e dados biométricos são fornecidos no ambiente oficial de verificação da Didit, nunca pelo WhatsApp.</p>
             <label style={{display:'flex',gap:8,alignItems:'flex-start'}}>
               <input type="checkbox" checked={kycConsent} disabled={kycBusy}
