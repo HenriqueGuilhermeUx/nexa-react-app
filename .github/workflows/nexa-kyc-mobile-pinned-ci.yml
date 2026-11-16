@@ -1,0 +1,34 @@
+name: Nexa KYC — mobile-first pinned portal QA
+on:
+  push:
+    branches:
+      - release/nexa-kyc-mobile-first-from-pinned-20261116
+permissions:
+  contents: read
+jobs:
+  validated-pinned-portal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.19.4'
+      - name: Exact diff against original production portal source
+        run: |
+          node - <<'NODE'
+          const cp=require('node:child_process');
+          const assert=require('node:assert/strict');
+          const names=cp.execFileSync('git',['diff-tree','--no-commit-id','--name-only','-r','HEAD'],{encoding:'utf8'}).trim().split('\n').filter(Boolean);
+          const allowed=new Set(['src/NexaLifecycleCoach.jsx','test/kyc-mobile-first-content.test.mjs','.github/workflows/nexa-kyc-mobile-pinned-ci.yml']);
+          assert.deepEqual(names.filter(name=>!allowed.has(name)),[]);
+          NODE
+      - run: npm install --no-audit --no-fund
+      - name: Install only preexisting build pipeline optional Solana peers
+        run: npm install --no-save --no-package-lock --no-audit --no-fund @solana-program/system@0.8.0 @solana-program/memo@0.8.0 @solana-program/token@0.6.0
+      - name: Run all original KYC, Privy, Pix and build checks
+        run: npm run check
+      - name: Validate mobile KYC safety and no secret-link handoff
+        run: node --test test/kyc-mobile-first-content.test.mjs
+      - name: No deployment or KYC session creation
+        run: echo 'Validated static UI only; no backend changes, no messages, no deploy'
