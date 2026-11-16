@@ -37,4 +37,5 @@ jobs:
       - name: Validate existing Privy and all web content
         run: npm run check
       - name: No automated email or user consent change
-        run: echo 'UI only: opt-in remains off until explicit action, no background campaign sends'
+        run: |
+          echo 'UI only: opt-in remains off until explicit action, no background campaign sends'
