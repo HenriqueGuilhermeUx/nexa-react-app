@@ -98,11 +98,17 @@ export default function AaveRealWallet({accessToken,apiUrl}){
     }catch{}
   },[wallets]);
 
-  useEffect(()=>{\n    if(status?.pilotEnabled===true) void refreshPosition();\n  },[status?.pilotEnabled]);\n\n  async function refreshPosition(){
+  useEffect(()=>{
+    if(status?.pilotEnabled===true) void refreshPosition();
+  },[status?.pilotEnabled]);
+
+  async function refreshPosition(){
     setBusy(true);setError('');
     try{
       const data=await call('position');
-      if(data?.success!==true||data.chainId!==137||\n        data.source!=='POLYGON_AAVE_V3_NATIVE_USDC'||\n        !Number.isFinite(Date.parse(data.readAt))||
+      if(data?.success!==true||data.chainId!==137||
+        data.source!=='POLYGON_AAVE_V3_NATIVE_USDC'||
+        !Number.isFinite(Date.parse(data.readAt))||
         !/^\d+$/.test(data.usdcBalanceBaseUnits)||
         !/^\d+$/.test(data.aUsdcBalanceBaseUnits))throw Error('Posição Aave inválida');
       findWallet(wallets,data.owner);
@@ -204,7 +210,8 @@ export default function AaveRealWallet({accessToken,apiUrl}){
           <div className="notice notice-info" style={{margin:'12px 0'}}>
             <h3>Minha posição real</h3>
             <p>USDC na carteira: {position?usdc(position.usdcBalanceBaseUnits):'a consultar'}</p>
-            <p>aUSDC aplicado: {position?usdc(position.aUsdcBalanceBaseUnits):'a consultar'}</p>\n            <p className="muted"><small>Fonte: Polygon · Aave V3 · USDC nativo. {position?'Leitura: '+new Date(position.readAt).toLocaleString('pt-BR'):'Aguardando leitura on-chain.'} Os valores variam e não integram o saldo contábil Nexa.</small></p>
+            <p>aUSDC aplicado: {position?usdc(position.aUsdcBalanceBaseUnits):'a consultar'}</p>
+            <p className="muted"><small>Fonte: Polygon · Aave V3 · USDC nativo. {position?'Leitura: '+new Date(position.readAt).toLocaleString('pt-BR'):'Aguardando leitura on-chain.'} Os valores variam e não integram o saldo contábil Nexa.</small></p>
             <button className="secondary-button" type="button" onClick={refreshPosition}
               disabled={busy||Boolean(pending)}>Atualizar saldos Aave</button>
           </div>
