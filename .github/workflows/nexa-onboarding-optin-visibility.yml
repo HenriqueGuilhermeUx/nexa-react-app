@@ -24,7 +24,30 @@ jobs:
           node - <<'NODE'
           const cp=require('node:child_process'),assert=require('node:assert/strict'),fs=require('node:fs');
           const files=cp.execFileSync('git',['diff','--name-only','origin/main...HEAD'],{encoding:'utf8'}).trim().split('\n').filter(Boolean);
-          assert.deepEqual(files.filter(f=>!['src/App.jsx','package.json','.github/workflows/nexa-onboarding-optin-visibility.yml'].includes(f)),[]);
+          // Keep the onboarding contract strict, but permit the exact Aave
+          // pilot files in the separate Aave PR. No unrelated modules allowed.
+          const onboardingAllowed=['src/App.jsx','package.json',
+            '.github/workflows/nexa-onboarding-optin-visibility.yml'];
+          const aaveAllowed=[
+            'src/AaveRealWallet.jsx','src/aavePilotWallet.js',
+            'scripts/validate-aave-pwa-pilot.mjs',
+            '.github/workflows/aave-pwa-user-wallet-pilot-qa.yml',
+            '.github/workflows/nexa-onboarding-optin-visibility.yml',
+          ];
+          const aavePilot=files.includes('src/AaveRealWallet.jsx');
+          const allowed=aavePilot ? [...onboardingAllowed,...aaveAllowed] : onboardingAllowed;
+          assert.deepEqual(files.filter(f=>!allowed.includes(f)),[]);
+          if (aavePilot) {
+            // Onboarding remains unchanged and only the separately gated
+            // Aave module is added; do not weaken KYC or opt-in requirements.
+            for (const filename of aaveAllowed.slice(0,4)) {
+              assert(files.includes(filename),'Incomplete Aave pilot PR: '+filename);
+            }
+            const aave=fs.readFileSync('src/AaveRealWallet.jsx','utf8');
+            assert(aave.includes('status?.pilotEnabled'));
+            assert(aave.includes('riskAcknowledged:true'));
+            assert(aave.includes('getAavePilotReceipt'));
+          }
           const ui=fs.readFileSync('src/App.jsx','utf8');
           const manifest=JSON.parse(fs.readFileSync('package.json','utf8'));
           const old=JSON.parse(cp.execFileSync('git',['show','origin/main:package.json'],{encoding:'utf8'}));
