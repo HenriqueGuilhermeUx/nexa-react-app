@@ -1,4 +1,5 @@
 import InvestCreditPreview from './InvestCreditPreview.jsx';
+import AaveRealWallet from './AaveRealWallet.jsx';
 import NexaPremiumAgentics from './NexaPremiumAgentics.jsx';
 import NexaLifecycleCoach from './NexaLifecycleCoach.jsx';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
@@ -536,6 +537,7 @@ function Dashboard({session, user, profile, history, onRefresh, onLogout}) {
         )}
 
         <InvestCreditPreview accessToken={session.accessToken} apiUrl={API_URL} />
+        <AaveRealWallet accessToken={session.accessToken} apiUrl={API_URL} />
 
         <section className="content-grid">
           <article className="content-card">
