@@ -37,6 +37,7 @@ async function walletProvider(wallet){
 export default function AaveRealWallet({accessToken,apiUrl}){
   const {wallets=[]}=useWallets();
   const [status,setStatus]=useState(null);
+  const [position,setPosition]=useState(null);
   const [loading,setLoading]=useState(true);
   const [action,setAction]=useState('SUPPLY');
   const [amount,setAmount]=useState('1');
@@ -79,6 +80,39 @@ export default function AaveRealWallet({accessToken,apiUrl}){
     return()=>{active=false;};
   },[accessToken,apiUrl]);
 
+  const pendingKey=(owner)=>'nexa_aave_pilot_pending_v1_'+String(owner||'').toLowerCase();
+  useEffect(()=>{
+    try{
+      for(const wallet of wallets){
+        const record=localStorage.getItem(pendingKey(wallet.address));
+        if(!record)continue;
+        const data=JSON.parse(record);
+        if(/^0x[a-fA-F0-9]{64}$/.test(data.hash)&&
+           String(data.owner||'').toLowerCase()===String(wallet.address).toLowerCase()&&
+           ['APPROVAL','SUPPLY','WITHDRAW'].includes(data.step?.kind)) {
+          setPending(data);
+          setNotice('Uma transação Aave anterior ainda precisa ser verificada; não repita.');
+          break;
+        }
+      }
+    }catch{}
+  },[wallets]);
+
+  async function refreshPosition(){
+    setBusy(true);setError('');
+    try{
+      const data=await call('position');
+      if(data?.success!==true||data.chainId!==137||
+        !/^\d+$/.test(data.usdcBalanceBaseUnits)||
+        !/^\d+$/.test(data.aUsdcBalanceBaseUnits))throw Error('Posição Aave inválida');
+      findWallet(wallets,data.owner);
+      setPosition(data);
+    }catch(e){
+      setPosition(null);
+      setError(e?.message||'Aave indisponível, não é saldo zero.');
+    }finally{setBusy(false);}
+  }
+
   function clear(){
     setQuote(null);setPending(null);setNotice('');setError('');
   }
@@ -87,7 +121,7 @@ export default function AaveRealWallet({accessToken,apiUrl}){
     if(!status?.pilotEnabled||!accepted||pending||busy)return;
     setBusy(true);clear();
     try{
-      parsePilotDecimal(amount);
+      parsePilotDecimal(amount.replace(',','.'));
       const q=await call('prepare',{
         action,amountUsdc:amount.replace(',','.'),chainId:AAVE_CHAIN,riskAcknowledged:true,
       });
@@ -105,7 +139,9 @@ export default function AaveRealWallet({accessToken,apiUrl}){
       const w=findWallet(wallets,quote.walletAddress);
       const provider=await walletProvider(w);
       const {hash,step}=await sendAavePilotStep(provider,quote,w.address);
-      setQuote(null);setPending({hash,step,owner:w.address});
+      const submitted={hash,step,owner:w.address};
+      setQuote(null);setPending(submitted);
+      try{localStorage.setItem(pendingKey(w.address),JSON.stringify(submitted));}catch{}
       setNotice('A transação já foi enviada. Não repita a operação enquanto confirma.');
     }catch(e){setError(e?.message||'A carteira não confirmou a transação.');}
     finally{setBusy(false);}
@@ -117,13 +153,37 @@ export default function AaveRealWallet({accessToken,apiUrl}){
       const w=findWallet(wallets,pending.owner),provider=await walletProvider(w);
       const result=await getAavePilotReceipt(provider,pending.hash,pending.owner,pending.step.to);
       if(result==='pending'){setNotice('Transação aguardando confirmação. Não repita.');return;}
-      const kind=pending.step.kind;setPending(null);
-      if(result==='failed'){setNotice('Transação falhou na blockchain; gás pode ter sido consumido.');return;}
+      if(result==='failed'){
+        setPending(null);
+        try{localStorage.removeItem(pendingKey(pending.owner));}catch{}
+        setNotice('Transação falhou na blockchain; gás pode ter sido consumido.');
+        return;
+      }
+      // Server independently validates owner, input calldata, success event
+      // and 32 Polygon blocks. Do not mark done on a spoofable client receipt.
+      const attested=await call('receipt?txHash='+encodeURIComponent(pending.hash));
+      if(attested?.state!=='confirmed'){
+        setNotice('Executada na blockchain; aguardando confirmação final da Nexa. Não repita.');
+        return;
+      }
+      if(String(attested.walletAddress||'').toLowerCase()!==pending.owner.toLowerCase()||
+         attested.kind!==pending.step.kind||attested.onchainEventMatched!==true)
+         throw Error('Comprovante Aave diferente do esperado');
+      const kind=pending.step.kind;
+      setPending(null);
+      try{localStorage.removeItem(pendingKey(pending.owner));}catch{}
       setNotice(kind==='APPROVAL'
         ?'Autorização limitada confirmada. Revise novamente para aplicar, com dados novos.'
         :kind==='SUPPLY'
-          ?'USDC aplicado na Aave! Verifique sua posição e seus aTokens.'
+          ?'USDC aplicado na Aave! Atualize sua posição em aUSDC.'
           :'USDC retirado da Aave para sua carteira.');
+      if(kind!=='APPROVAL'){
+        const positionData=await call('position');
+        if(positionData?.success===true&&positionData?.chainId===137){
+          findWallet(wallets,positionData.owner);
+          setPosition(positionData);
+        }
+      }
     }catch(e){setError(e?.message||'Não foi possível verificar recibo da transação.');}
     finally{setBusy(false);}
   }
@@ -141,6 +201,13 @@ export default function AaveRealWallet({accessToken,apiUrl}){
       {status?.pilotEnabled&&(
         <>
           <div className="notice notice-info">Seu acesso ao piloto foi autorizado. Cada aprovação e depósito é uma transação distinta: nenhuma é realizada sem sua confirmação.</div>
+          <div className="notice notice-info" style={{margin:'12px 0'}}>
+            <h3>Minha posição real</h3>
+            <p>USDC na carteira: {position?usdc(position.usdcBalanceBaseUnits):'a consultar'}</p>
+            <p>aUSDC aplicado: {position?usdc(position.aUsdcBalanceBaseUnits):'a consultar'}</p>
+            <button className="secondary-button" type="button" onClick={refreshPosition}
+              disabled={busy||Boolean(pending)}>Atualizar saldos Aave</button>
+          </div>
           <form onSubmit={review}>
             <fieldset disabled={busy||Boolean(pending)} style={{border:'none',padding:0}}>
               <legend>Escolha a operação</legend>
