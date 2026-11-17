@@ -1,0 +1,39 @@
+name: Nexa Web/PWA Aave real Privy wallet pilot — no deploy
+on:
+  push:
+    branches: [feat/aave-real-usdc-pilot-pwa-20261117]
+permissions:
+  contents: read
+jobs:
+  pwa-aave-pilot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install existing Web dependencies
+        run: npm install --no-audit --no-fund
+      - name: Verify existing Nexa web contract and bundle
+        run: npm run check
+      - name: Verify real user-signed Aave pilot controls with mock wallet
+        run: node scripts/validate-aave-pwa-pilot.mjs
+      - name: Confirm no backend secrets or autonomous wallet signatures
+        run: |
+          node - <<'NODE'
+          const fs=require('fs');
+          const screen=fs.readFileSync('src/AaveRealWallet.jsx','utf8');
+          const helper=fs.readFileSync('src/aavePilotWallet.js','utf8');
+          if(!screen.includes('status?.pilotEnabled')||
+             !screen.includes('riskAcknowledged:true')||
+             !helper.includes("method:'eth_sendTransaction'")||
+             !helper.includes('expectedData(step.kind,amount,owner)')||
+             helper.includes('privateKey')||screen.includes('privateKey')) {
+            throw Error('Missing strict user-initiated Aave wallet safety checks');
+          }
+          console.log('Nexa PWA safe: no automatic deployment, server gate, no private keys or arbitrary calldata');
+          NODE
