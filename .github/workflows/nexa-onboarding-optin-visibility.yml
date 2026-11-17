@@ -53,9 +53,16 @@ jobs:
           const old=JSON.parse(cp.execFileSync('git',['show','origin/main:package.json'],{encoding:'utf8'}));
           assert.equal(manifest.dependencies['@solana-program/system'],'0.8.0');
           assert.equal(manifest.dependencies['@solana-program/token'],'0.6.0');
-          delete manifest.dependencies['@solana-program/system'];
-          delete manifest.dependencies['@solana-program/token'];
-          assert.deepEqual(manifest,old,'Privy, React and build dependencies must remain unchanged');
+          if (aavePilot) {
+            // On this Aave-only PR the exact current main manifest is the
+            // baseline; both Solana compatibility dependencies already exist.
+            // Do not remove or alter any existing package.
+            assert.deepEqual(manifest,old,'Aave PR must preserve every existing dependency');
+          } else {
+            delete manifest.dependencies['@solana-program/system'];
+            delete manifest.dependencies['@solana-program/token'];
+            assert.deepEqual(manifest,old,'Privy, React and build dependencies must remain unchanged');
+          }
           assert(ui.includes('<details open className="hero-card"'));
           assert(ui.includes('<NexaLifecycleCoach accessToken={session?.accessToken} apiBaseUrl={API_URL}/>'));
           const coach=fs.readFileSync('src/NexaLifecycleCoach.jsx','utf8');
