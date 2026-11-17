@@ -58,21 +58,22 @@ export default function NexaLifecycleCoach({accessToken, apiBaseUrl}) {
     return ()=>controller.abort();
   },[load]);
 
-  const setEducationOptIn = async (nextValue) => {
+  const setEducationOptIn = async (nextValue, nextFrequency = 'weekly') => {
     if (!accessToken || saving) return;
     setSaving(true);setError('');
     try {
       const res=await fetch(apiBaseUrl+'/lifecycle/preferences',{
         method:'POST',
         headers:{'Content-Type':'application/json',Authorization:'Bearer '+accessToken},
-        body:JSON.stringify({educationalEmailOptIn:nextValue,emailFrequency:'weekly'}),
+        body:JSON.stringify({educationalEmailOptIn:nextValue,emailFrequency:nextFrequency}),
       });
       if (!res.ok) throw new Error(apiError(res));
       const result=await res.json();
-      if (!result.success) throw new Error('Preferências não puderam ser atualizadas.');
+      if (!result.success || result.optedIn !== nextValue || (nextValue && result.frequency !== nextFrequency)) throw new Error('Não foi possível confirmar a preferência no servidor.');
       setSnapshot(prev=>prev?{...prev,educationalEmail:{
         ...prev.educationalEmail,optedIn:result.optedIn,
-        consentAt:result.consentAt,deliveryEnabled:result.deliveryEnabled,
+        consentAt:result.consentAt,frequency:result.frequency,
+        deliveryEnabled:result.deliveryEnabled,dailyDeliveryEnabled:false,
       }}:prev);
     } catch (err) {
       setError(err?.message || 'Erro ao salvar preferência.');
@@ -104,17 +105,29 @@ export default function NexaLifecycleCoach({accessToken, apiBaseUrl}) {
           ))}
         </ul>
         <div style={{padding:12,border:'1px solid #64748b55',borderRadius:10}}>
-          <strong>Conteúdo educativo semanal por e-mail</strong>
-          <p>Opcional. Sem promessas de lucro, recomendações de compra ou mensagens de WhatsApp. Você pode cancelar a qualquer momento.</p>
-          <label style={{display:'flex',gap:8,alignItems:'center',cursor:'pointer'}}>
-            <input type="checkbox"
-              checked={Boolean(snapshot.educationalEmail?.optedIn)}
-              disabled={saving}
-              onChange={(event)=>setEducationOptIn(event.target.checked)}/>
-            {snapshot.educationalEmail?.optedIn?'Quero receber conteúdo educativo':'Aceito receber conteúdo educativo por e-mail'}
+          <strong>Conteúdo educativo: escolha a frequência</strong>
+          <p>Opcional e revogável. Informações gerais sobre segurança e cripto, sem recomendação individual. O boletim diário ainda não é disparado.</p>
+          <label style={{display:'flex',gap:8,alignItems:'center',marginTop:8}}>
+            <input type="radio" name="nexa-education-frequency" checked={!snapshot.educationalEmail?.optedIn}
+              disabled={saving} onChange={()=>setEducationOptIn(false,'weekly')}/>
+            Não receber e-mails educativos
           </label>
-          {!snapshot.educationalEmail?.deliveryEnabled &&
-            <p><small>O envio automático ainda não está ativo. Sua preferência será registrada antes de habilitarmos os comunicados.</small></p>}
+          <label style={{display:'flex',gap:8,alignItems:'center',marginTop:8}}>
+            <input type="radio" name="nexa-education-frequency"
+              checked={Boolean(snapshot.educationalEmail?.optedIn && snapshot.educationalEmail?.frequency !== 'daily')}
+              disabled={saving} onChange={()=>setEducationOptIn(true,'weekly')}/>
+            Orientações semanais (disponíveis)
+          </label>
+          <label style={{display:'flex',gap:8,alignItems:'center',marginTop:8}}>
+            <input type="radio" name="nexa-education-frequency"
+              checked={Boolean(snapshot.educationalEmail?.optedIn && snapshot.educationalEmail?.frequency === 'daily')}
+              disabled={saving} onChange={()=>setEducationOptIn(true,'daily')}/>
+            Boletim diário (registrar interesse; envios ainda desligados)
+          </label>
+          {snapshot.educationalEmail?.optedIn && snapshot.educationalEmail?.frequency === 'daily' &&
+            <p><small>Interesse diário registrado. Esta escolha substitui a preferência semanal e não inicia mensagens enquanto o envio diário não estiver habilitado.</small></p>}
+          {snapshot.educationalEmail?.optedIn && snapshot.educationalEmail?.frequency !== 'daily' && !snapshot.educationalEmail?.deliveryEnabled &&
+            <p><small>O envio semanal ainda não está disponível. Sua escolha foi registrada.</small></p>}
         </div>
       </>}
     </section>
