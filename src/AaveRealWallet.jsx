@@ -130,6 +130,7 @@ export default function AaveRealWallet({accessToken,apiUrl}){
       parsePilotDecimal(amount.replace(',','.'));
       const q=await call('prepare',{
         action,amountUsdc:amount.replace(',','.'),chainId:AAVE_CHAIN,riskAcknowledged:true,
+        idempotencyKey:crypto.randomUUID(),
       });
       const w=findWallet(wallets,q.walletAddress);
       validateAavePilotQuote(q,w.address);
@@ -145,9 +146,17 @@ export default function AaveRealWallet({accessToken,apiUrl}){
       const w=findWallet(wallets,quote.walletAddress);
       const provider=await walletProvider(w);
       const {hash,step}=await sendAavePilotStep(provider,quote,w.address);
-      const submitted={hash,step,owner:w.address};
+      const submitted={hash,step,owner:w.address,durableIntentId:quote.durableIntentId};
       setQuote(null);setPending(submitted);
       try{localStorage.setItem(pendingKey(w.address),JSON.stringify(submitted));}catch{}
+      if(submitted.durableIntentId){
+        try { await call('intents/report',{
+          intentId:submitted.durableIntentId,txHash:submitted.hash,
+        }); } catch {
+          setNotice('Transação enviada; o registro ainda não foi reconciliado pela Nexa. Não repita.');
+          return;
+        }
+      }
       setNotice('A transação já foi enviada. Não repita a operação enquanto confirma.');
     }catch(e){setError(e?.message||'A carteira não confirmou a transação.');}
     finally{setBusy(false);}
