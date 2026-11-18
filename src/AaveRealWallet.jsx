@@ -170,9 +170,18 @@ export default function AaveRealWallet({accessToken,apiUrl}){
       if(result==='pending'){setNotice('Transação aguardando confirmação. Não repita.');return;}
       if(result==='failed'){
         if(pending.durableIntentId){
-          // Do not discard a durable intent that still needs server-side
-          // failure reconciliation. Otherwise a repeat may duplicate effects.
-          setNotice('A transação falhou na Polygon. A operação registrada precisa de revisão antes de tentar novamente. O gás pode ter sido consumido.');
+          // Only server-attested canonical failure with 32 blocks may unlock
+          // a durable operation. Failed/unavailable RPC keeps the local lock.
+          const recorded=await call('intents/reconcile',{
+            intentId:pending.durableIntentId,txHash:pending.hash,
+          });
+          if(recorded?.state!=='failed'||recorded.persisted!==true){
+            setNotice('Falha on-chain observada; reconciliação Nexa pendente. Não repita.');
+            return;
+          }
+          setPending(null);
+          try{localStorage.removeItem(pendingKey(pending.owner));}catch{}
+          setNotice('Falha confirmada e registrada pela Nexa. O gás pode ter sido consumido; revise antes de tentar novamente.');
           return;
         }
         setPending(null);
