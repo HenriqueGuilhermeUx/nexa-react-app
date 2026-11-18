@@ -184,6 +184,15 @@ export default function AaveRealWallet({accessToken,apiUrl}){
       if(String(attested.walletAddress||'').toLowerCase()!==pending.owner.toLowerCase()||
          attested.kind!==pending.step.kind||attested.onchainEventMatched!==true)
          throw Error('Comprovante Aave diferente do esperado');
+      if(pending.durableIntentId){
+        const recorded=await call('intents/reconcile',{
+          intentId:pending.durableIntentId,txHash:pending.hash,
+        });
+        if(recorded?.state!=='confirmed'||recorded.persisted!==true){
+          setNotice('Blockchain confirmada; reconciliação Nexa ainda pendente. Não repita.');
+          return;
+        }
+      }
       const kind=pending.step.kind;
       setPending(null);
       try{localStorage.removeItem(pendingKey(pending.owner));}catch{}
