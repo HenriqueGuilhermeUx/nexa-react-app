@@ -169,6 +169,12 @@ export default function AaveRealWallet({accessToken,apiUrl}){
       const result=await getAavePilotReceipt(provider,pending.hash,pending.owner,pending.step.to);
       if(result==='pending'){setNotice('Transação aguardando confirmação. Não repita.');return;}
       if(result==='failed'){
+        if(pending.durableIntentId){
+          // Do not discard a durable intent that still needs server-side
+          // failure reconciliation. Otherwise a repeat may duplicate effects.
+          setNotice('A transação falhou na Polygon. A operação registrada precisa de revisão antes de tentar novamente. O gás pode ter sido consumido.');
+          return;
+        }
         setPending(null);
         try{localStorage.removeItem(pendingKey(pending.owner));}catch{}
         setNotice('Transação falhou na blockchain; gás pode ter sido consumido.');
