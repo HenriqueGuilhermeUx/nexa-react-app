@@ -66,6 +66,29 @@ test('expired sessions may be restarted, but never auto-submitted',async()=>{
   assert.equal((await execute()).reused,false);
   assert.equal(calls.length,3);
 });
+test('abandoned and unknown Didit sessions do not redirect to stale verification links',async()=>{
+  for(const diditSessionStatus of ['Abandoned','abandoned','Failed','Cancelled','unknown','']) {
+    const {execute,calls}=setup({current:{
+      success:true,provider:'didit',kycStatus:'pending',
+      diditSessionStatus,verificationUrl:VALID,
+    }});
+    const result=await execute();
+    assert.equal(result.reused,false,diditSessionStatus);
+    assert.equal(calls.length,3,diditSessionStatus);
+    assert.equal(calls.at(-1).url,API+'/kyc/didit/brazil/start');
+    assert.equal(calls.at(-1).options.method,'POST');
+  }
+});
+test('only explicitly resumable status opens an existing trusted link',async()=>{
+  for(const diditSessionStatus of ['Not Started','in_progress','awaiting-user','processing']) {
+    const {execute,calls}=setup({current:{
+      success:true,provider:'didit',kycStatus:'pending',
+      diditSessionStatus,verificationUrl:VALID,
+    }});
+    assert.deepEqual(await execute(),{kind:'redirect',url:VALID,reused:true});
+    assert.equal(calls.length,2);
+  }
+});
 test('approved status blocks any creation attempt',async()=>{
   const {execute,calls}=setup({current:{success:true,provider:'didit',kycStatus:'approved'}});
   assert.equal((await execute()).kind,'approved');

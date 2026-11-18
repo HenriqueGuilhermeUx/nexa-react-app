@@ -62,8 +62,16 @@ export async function prepareBrazilDiditStart({
     return {kind:'manual_review',message:'Existe uma revisão pendente. Procure a equipe Nexa para orientação.'};
   }
   const existing = trustedDiditUrl(current.verificationUrl);
-  const currentStatus = String(current.diditSessionStatus || '').toLowerCase();
-  if (existing && !/(expired|failed|cancelled|canceled|rejected|completed)/.test(currentStatus)) {
+  // Only a confirmed resumable status is safe for a direct redirect. An
+  // abandoned, expired or unknown session must go through authenticated
+  // start, where Didit/Brazil and the manual-review gate can decide.
+  const currentStatus = String(current.diditSessionStatus || '')
+    .trim().toLowerCase().replace(/[_-]+/g,' ').replace(/\s+/g,' ');
+  const resumableStates = new Set([
+    'not started','created','started','pending','in progress',
+    'awaiting user','processing','resubmitted',
+  ]);
+  if (existing && resumableStates.has(currentStatus)) {
     return {kind:'redirect',url:existing,reused:true};
   }
   const startRes = await fetchImpl(base+'/kyc/didit/brazil/start',{

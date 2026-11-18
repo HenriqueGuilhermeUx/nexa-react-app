@@ -1,0 +1,31 @@
+name: Nexa pinned portal Didit resume safety CI
+on:
+  push:
+    branches:
+      - fix/nexa-pinned-didit-resume-status-20261118
+permissions:
+  contents: read
+jobs:
+  pinned-resume:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.19.4'
+      - name: Protect exact released portal baseline
+        run: |
+          node - <<'NODE'
+          const cp=require('node:child_process'),assert=require('node:assert/strict');
+          const names=cp.execFileSync('git',['diff','--name-only','1db7745bd6901a267eb2c1baa3885281de0d83a4','HEAD'],{encoding:'utf8'}).trim().split('\n').filter(Boolean);
+          const allowed=new Set(['src/kyc-start-contract.mjs','test/kyc-start-contract.test.mjs','.github/workflows/nexa-pinned-didit-resume-ci.yml']);
+          assert.deepEqual(names.filter(name=>!allowed.has(name)),[]);
+          NODE
+      - run: npm install --no-audit --no-fund
+      - run: npm install --no-save --no-package-lock --no-audit --no-fund @solana-program/system@0.8.0 @solana-program/memo@0.8.0 @solana-program/token@0.6.0
+      - name: KYC start contract and full web smoke
+        run: npm run check
+      - run: echo 'No deploy and no Didit production call'
