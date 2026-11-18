@@ -67,8 +67,11 @@ jobs:
           assert(ui.includes('<NexaLifecycleCoach accessToken={session?.accessToken} apiBaseUrl={API_URL}/>'));
           const coach=fs.readFileSync('src/NexaLifecycleCoach.jsx','utf8');
           assert(coach.includes("educationalEmailOptIn:nextValue"));
-          assert(coach.includes('type="checkbox"'));
-          assert(coach.includes("setEducationOptIn(event.target.checked)"));
+          // The source branch has an explicit checkbox; current main uses
+          // explicit weekly/daily/off radio choices. Both must require user action.
+          assert(coach.includes('type="checkbox"') || coach.includes('type="radio"'));
+          assert(coach.includes('setEducationOptIn('));
+          assert(coach.includes('onChange='));
           NODE
       - run: npm install --no-audit --no-fund
       - name: Validate existing Privy and all web content
