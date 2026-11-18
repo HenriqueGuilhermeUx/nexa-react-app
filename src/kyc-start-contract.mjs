@@ -66,7 +66,7 @@ export async function prepareBrazilDiditStart({
   // abandoned, expired or unknown session must go through authenticated
   // start, where Didit/Brazil and the manual-review gate can decide.
   const currentStatus = String(current.diditSessionStatus || '')
-    .trim().toLowerCase().replace(/[_-]+/g,' ').replace(/\\s+/g,' ');
+    .trim().toLowerCase().replace(/[_-]+/g,' ').replace(/\s+/g,' ');
   const resumableStates = new Set([
     'not started','created','started','pending','in progress',
     'awaiting user','processing','resubmitted',
