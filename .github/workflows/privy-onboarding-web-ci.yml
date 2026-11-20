@@ -1,0 +1,21 @@
+name: Nexa Web Privy onboarding regression
+on:
+  pull_request:
+    paths:
+      - 'src/App.jsx'
+      - 'scripts/validate-privy-web.mjs'
+      - '.github/workflows/privy-onboarding-web-ci.yml'
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm run check
