@@ -32,6 +32,8 @@ jobs:
           assert.equal(manifest.dependencies['@solana-program/token'],'0.6.0');
           delete manifest.dependencies['@solana-program/system'];
           delete manifest.dependencies['@solana-program/token'];
+          delete old.dependencies['@solana-program/system'];
+          delete old.dependencies['@solana-program/token'];
           assert.deepEqual(manifest,old,'Privy, React and build dependencies must remain unchanged');
           assert(ui.includes('<details open className="hero-card"'));
           assert(ui.includes('<NexaLifecycleCoach accessToken={session?.accessToken} apiBaseUrl={API_URL}/>'));
