@@ -32,7 +32,8 @@ requireText(app, 'createWallet()', 'execução de criação da embedded wallet')
 requireText(app, "settlementProfile === 'direct_settlement'", 'separação de perfil direct settlement');
 requireText(app, 'isLegacyBeta', 'preservação do fluxo Beta/Legado');
 requireText(app, "user?.wallet?.privyLinked !== true", 'não confundir EOA gerenciada com wallet Privy');
-requireText(app, "String(user?.kycStatus || '').toLowerCase() === 'approved'", 'exigir KYC antes de vincular Privy');
+requireText(app, "user?.id && user?.wallet?.privyLinked !== true", 'autocriar Privy na conta autenticada, mesmo antes do KYC');
+requireText(app, "user?.wallet?.privyLinked !== true", 'não confundir EOA gerenciada com Privy');
 rejectText(app, "isDirect && !profile?.wallet?.linked", 'bloqueio Privy para usuários legado');
 requireText(app, 'PRIVY_EMAIL', 'mensagem/código de proteção de e-mail do backend não é obrigatório no cliente');
 

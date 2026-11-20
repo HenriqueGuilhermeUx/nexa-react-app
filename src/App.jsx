@@ -877,11 +877,12 @@ export default function App() {
   const privyEmail = getPrivyEmail(privyUser);
   const embeddedWallet = useMemo(() => getEmbeddedWallet(wallets), [wallets]);
   const isDirect = profile?.settlementProfile === 'direct_settlement';
-  // Wallet-First applies to approved Nexa customers, including legacy_beta.
-  // A nexa-managed address / placeholder privyWalletId is NOT a linked Privy wallet.
+  // Nexa creates/reuses the individual's Privy wallet automatically after
+  // authenticated login, regardless of KYC stage. All financial operations
+  // still require KYC approval, ownership proof and treasury readiness.
+  // A generated nexa-managed address must never count as a Privy wallet.
   const needsWallet = Boolean(
-    String(user?.kycStatus || '').toLowerCase() === 'approved' &&
-    user?.wallet?.privyLinked !== true
+    user?.id && user?.wallet?.privyLinked !== true
   );
   const emailMismatch = Boolean(
     authenticated && privyEmail && nexaEmail && privyEmail !== nexaEmail,
