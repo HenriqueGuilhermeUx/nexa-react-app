@@ -491,7 +491,7 @@ function Dashboard({session, user, profile, history, onRefresh, onLogout}) {
             {consultantOpen && <NexaPremiumAgentics accessToken={session?.accessToken} apiBaseUrl={API_URL} />}
           </details>
         )}
-        <MayaAgenticsPlanningBenefit />
+        <MayaAgenticsPlanningBenefit accessToken={session?.accessToken} userId={user?.id || session?.user?.id || ''} apiBaseUrl={API_URL} />
         <section className="hero-card">
           <div>
             <StatusPill tone={isLegacy ? 'neutral' : 'success'}>
