@@ -1,5 +1,6 @@
 import InvestCreditPreview from './InvestCreditPreview.jsx';
 import NexaPremiumAgentics from './NexaPremiumAgentics.jsx';
+import MayaAgenticsPlanningBenefit from './MayaAgenticsPlanningBenefit.jsx';
 import NexaLifecycleCoach from './NexaLifecycleCoach.jsx';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
@@ -490,6 +491,7 @@ function Dashboard({session, user, profile, history, onRefresh, onLogout}) {
             {consultantOpen && <NexaPremiumAgentics accessToken={session?.accessToken} apiBaseUrl={API_URL} />}
           </details>
         )}
+        <MayaAgenticsPlanningBenefit accessToken={session?.accessToken} userId={user?.id || session?.user?.id || ''} apiBaseUrl={API_URL} />
         <section className="hero-card">
           <div>
             <StatusPill tone={isLegacy ? 'neutral' : 'success'}>

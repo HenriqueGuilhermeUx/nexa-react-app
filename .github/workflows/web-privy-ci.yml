@@ -38,6 +38,9 @@ jobs:
       - name: Validate secure Privy web contract
         run: npm run validate:contract
 
+      - name: Validate non-executable Maya Agentics Premium planning presentation
+        run: node scripts/validate-maya-agentics-planning.mjs
+
       - name: Build production portal
         run: npm run build
 
