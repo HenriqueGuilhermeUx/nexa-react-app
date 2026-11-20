@@ -22,4 +22,4 @@ export function parseMayaAgenticsBenefits(raw, expectedUserId) {
 
 /** Only enable after the authenticated backend benefits endpoint is deployed. */
 export const MAYA_BENEFITS_DISCOVERY_ENABLED =
-  import.meta.env.VITE_NEXA_MAYA_BENEFITS_DISCOVERY_ENABLED === 'true';
+  import.meta.env?.VITE_NEXA_MAYA_BENEFITS_DISCOVERY_ENABLED === 'true';
