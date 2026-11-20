@@ -515,7 +515,7 @@ function Dashboard({session, user, profile, history, onRefresh, onLogout}) {
           </article>
           <article className="metric-card">
             <span>Vínculo da carteira</span>
-            <strong>{wallet.linked || user?.walletAddress ? 'Confirmado' : 'Pendente'}</strong>
+            <strong>{user?.wallet?.privyLinked === true ? 'Privy vinculada' : 'Privy pendente'}</strong>
           </article>
           <article className="metric-card">
             <span>Auditoria</span>
@@ -875,7 +875,12 @@ export default function App() {
   const privyEmail = getPrivyEmail(privyUser);
   const embeddedWallet = useMemo(() => getEmbeddedWallet(wallets), [wallets]);
   const isDirect = profile?.settlementProfile === 'direct_settlement';
-  const needsWallet = Boolean(isDirect && !profile?.wallet?.linked);
+  // Wallet-First applies to approved Nexa customers, including legacy_beta.
+  // A nexa-managed address / placeholder privyWalletId is NOT a linked Privy wallet.
+  const needsWallet = Boolean(
+    String(user?.kycStatus || '').toLowerCase() === 'approved' &&
+    user?.wallet?.privyLinked !== true
+  );
   const emailMismatch = Boolean(
     authenticated && privyEmail && nexaEmail && privyEmail !== nexaEmail,
   );

@@ -31,6 +31,9 @@ requireText(app, 'useCreateWallet', 'criação manual de embedded wallet no logi
 requireText(app, 'createWallet()', 'execução de criação da embedded wallet');
 requireText(app, "settlementProfile === 'direct_settlement'", 'separação de perfil direct settlement');
 requireText(app, 'isLegacyBeta', 'preservação do fluxo Beta/Legado');
+requireText(app, "user?.wallet?.privyLinked !== true", 'não confundir EOA gerenciada com wallet Privy');
+requireText(app, "String(user?.kycStatus || '').toLowerCase() === 'approved'", 'exigir KYC antes de vincular Privy');
+rejectText(app, "isDirect && !profile?.wallet?.linked", 'bloqueio Privy para usuários legado');
 requireText(app, 'PRIVY_EMAIL', 'mensagem/código de proteção de e-mail do backend não é obrigatório no cliente');
 
 // O requisito acima é semântico no backend, não deve obrigar uma string de erro no frontend.
