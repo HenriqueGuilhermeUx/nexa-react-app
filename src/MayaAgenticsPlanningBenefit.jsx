@@ -20,8 +20,16 @@ export default function MayaAgenticsPlanningBenefit({accessToken, userId, apiBas
     const controller = new AbortController();
     // The same authenticated Nexa backend as the existing portal; no Agentics
     // staging origin, no financial data, no user-supplied URL or storage.
-    const api = String(apiBaseUrl || '').replace(/\\/$/, '');
-    if (!api.startsWith('https://') || !/^https:\\/\\/[^/]+\\/api\\/v1$/.test(api)) return;
+    const rawApi = String(apiBaseUrl || '').trim();
+    const api = rawApi.endsWith('/') ? rawApi.slice(0, -1) : rawApi;
+    let endpoint;
+    try {
+      endpoint = new URL(api);
+    } catch {
+      return;
+    }
+    if (endpoint.protocol !== 'https:' || endpoint.pathname !== '/api/v1' ||
+        endpoint.search || endpoint.hash || endpoint.username || endpoint.password) return;
     fetch(api + '/maya/agentics/benefits', {
       method:'GET', cache:'no-store', credentials:'omit',
       headers:{Authorization:'Bearer ' + accessToken,Accept:'application/json'},
