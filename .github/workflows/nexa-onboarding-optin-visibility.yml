@@ -39,7 +39,8 @@ jobs:
           assert(ui.includes('<NexaLifecycleCoach accessToken={session?.accessToken} apiBaseUrl={API_URL}/>'));
           const coach=fs.readFileSync('src/NexaLifecycleCoach.jsx','utf8');
           assert(coach.includes("educationalEmailOptIn:nextValue"));
-          assert(coach.includes("onChange={(event)=>setEducationOptIn(event.target.checked)}"));
+          assert(coach.includes("onChange={()=>setEducationOptIn(true,'weekly')}"));
+          assert(coach.includes("onChange={()=>setEducationOptIn(false,'weekly')}"));
           NODE
       - run: npm install --no-audit --no-fund
       - name: Validate existing Privy and all web content
