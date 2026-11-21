@@ -1,8 +1,9 @@
 [build]
   command = "npm install --no-audit --no-fund && npm run check"
   publish = "dist"
-  # Do not skip production builds based on stale content-diff detection.
-  ignore = "exit 1"
+  # Force Netlify to build even when its content-diff heuristic misfires.
+  # The standard `false` command exits nonzero, so Netlify must not skip.
+  ignore = "false"
 
 [build.environment]
   NODE_VERSION = "20.19.4"
