@@ -1,4 +1,3 @@
-import InvestCreditPreview from './InvestCreditPreview.jsx';
 import NexaPremiumAgentics from './NexaPremiumAgentics.jsx';
 import NexaLifecycleCoach from './NexaLifecycleCoach.jsx';
 import NexaFirstPixJourney from './NexaFirstPixJourney.jsx';
@@ -549,7 +548,25 @@ function Dashboard({session, user, profile, history, onRefresh, onLogout}) {
           </div>
         )}
 
-        <InvestCreditPreview accessToken={session.accessToken} apiUrl={API_URL} />
+        <section className="content-grid" aria-label="Nexa Rewards e Maya Explorar">
+          <article className="content-card">
+            <h2>Nexa Rewards · USDC</h2>
+            <p className="muted">
+              O Rewards via Privy Earn é opcional e está em homologação por etapas.
+              A participação depende da habilitação da sua conta e da autorização
+              individual pela carteira. Sem aplicação automática ou rendimento garantido.
+            </p>
+            <p><a href="/rewards.html">Conhecer o Rewards, custos e riscos →</a></p>
+          </article>
+          <article className="content-card">
+            <h2>Maya · Explorar</h2>
+            <p className="muted">
+              Uber, Ticketmaster e Sympla: descubra serviços e conclua a contratação
+              diretamente no parceiro. A Maya não compra nem reserva por você.
+            </p>
+            <p><a href="/explorar.html">Explorar serviços oficiais →</a></p>
+          </article>
+        </section>
 
         <section className="content-grid">
           <article className="content-card">
