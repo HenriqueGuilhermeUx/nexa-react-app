@@ -23,7 +23,7 @@ jobs:
           node-version: '22'
       - run: npm install --no-audit --no-fund
       # Match the validated Netlify build-site optional Privy Solana peers.
-      - run: npm install --no-save --no-audit --no-fund @solana-program/system@0.8.0 @solana-program/token@0.6.0
+      - run: npm install --no-save --no-package-lock --no-audit --no-fund --legacy-peer-deps @solana-program/system@0.8.0 @solana-program/memo@0.8.0 @solana-program/token@0.6.0
       - run: npm run check
       - name: Assert all financial operations remain in existing wallet flows
         run: |
