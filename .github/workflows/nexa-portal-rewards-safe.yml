@@ -1,0 +1,41 @@
+name: Nexa portal pinned Rewards and Maya safe CI
+on:
+  push:
+    branches:
+      - 'fix/nexa-portal-rewards-maya-explorar-pinned-20261126'
+  pull_request:
+    branches:
+      - 'release/nexa-portal-web-pinned-20261126'
+    paths:
+      - 'src/App.jsx'
+      - '.github/workflows/nexa-portal-rewards-safe.yml'
+  workflow_dispatch:
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-audit --no-fund
+      # Match the validated Netlify build-site optional Privy Solana peers.
+      - run: npm install --no-save --no-package-lock --no-audit --no-fund --legacy-peer-deps @solana-program/system@0.8.0 @solana-program/memo@0.8.0 @solana-program/token@0.6.0
+      - run: npm run check
+      - name: Assert all financial operations remain in existing wallet flows
+        run: |
+          node - <<'NODE'
+          const assert = require('node:assert/strict');
+          const fs = require('node:fs');
+          const c = fs.readFileSync('src/App.jsx','utf8');
+          assert.match(c, /href="\/rewards\.html"/);
+          assert.match(c, /href="\/explorar\.html"/);
+          assert.doesNotMatch(c, /<InvestCreditPreview/);
+          assert.match(c, /WalletActionPanel/);
+          assert.match(c, /WalletActivation/);
+          assert.doesNotMatch(c, /\/rewards\/join/);
+          console.log('Pinned Nexa portal: React build and Rewards/Maya link-only safety confirmed.');
+          NODE
