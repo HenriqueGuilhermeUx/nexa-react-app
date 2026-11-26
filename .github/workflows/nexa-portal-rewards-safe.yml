@@ -1,5 +1,8 @@
 name: Nexa portal pinned Rewards and Maya safe CI
 on:
+  push:
+    branches:
+      - 'fix/nexa-portal-rewards-maya-explorar-pinned-20261126'
   pull_request:
     branches:
       - 'release/nexa-portal-web-pinned-20261126'
